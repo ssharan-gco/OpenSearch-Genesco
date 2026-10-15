@@ -1,0 +1,17 @@
+{
+  "name": "sampleMap",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "yarn plugin-helpers build",
+    "plugin-helpers": "../../scripts/use_node ../../scripts/plugin_helpers",
+    "osd": "../../scripts/use_node ../../scripts/osd"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.2",
+    "maplibre-gl": "5.2.0"
+  },
+  "resolutions": {
+    "@mapbox/jsonlint-lines-primitives": "2.0.2"
+  }
+}
