@@ -1,0 +1,9 @@
+{
+  "id": "genescoMapStore",
+  "version": "1.0.3",
+  "opensearchDashboardsVersion": "3.8.0",
+  "server": true,
+  "ui": true,
+  "requiredPlugins": ["navigation"],
+  "optionalPlugins": []
+}
