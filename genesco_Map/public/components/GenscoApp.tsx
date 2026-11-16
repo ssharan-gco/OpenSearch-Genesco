@@ -5,6 +5,8 @@ import tzLookup from 'tz-lookup';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { PLUGIN_ID } from '../../common';
 import { GenscoAppDeps, SiteRecord, StatusFilter } from '../lib/types';
+import { normalizeUsState, UsStateName } from '../lib/us_states';
+import { getUsStateRegion, UsRegionName } from '../lib/us_regions';
 import { BrandCode, BRANDS, getBrandCode } from '../lib/brands';
 import { resolveTimeWindow } from '../lib/timeRange';
 import { getStoreMapKey } from '../lib/storeMapKey';
@@ -14,6 +16,8 @@ import { useGenscoMap } from '../hooks/useGenscoMap';
 import { SearchBar } from './SearchBar';
 import { FilterPanel } from './FilterPanel';
 import { BrandFilterPanel } from './BrandFilterPanel';
+import { StateFilterDropdown } from './state_filter_dropdown';
+import { RegionFilterDropdown } from './region_filter_dropdown';
 import { DetailPanel } from './detail/DetailPanel';
 
 const detectSystemTimeZone = () => {
@@ -37,6 +41,8 @@ export const GenscoApp = ({ basename, notifications, http, navigation }: GenscoA
   const [sampleMetrics, setSampleMetrics] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
   const [brandFilters, setBrandFilters] = useState<Set<BrandCode>>(() => new Set());
+  const [stateFilter, setStateFilter] = useState<UsStateName | null>(null);
+  const [regionFilter, setRegionFilter] = useState<UsRegionName | null>(null);
   const [search, setSearch] = useState('');
   const [timeStart, setTimeStart] = useState('now-5m');
   const [timeEnd, setTimeEnd] = useState('now');
@@ -117,8 +123,8 @@ export const GenscoApp = ({ basename, notifications, http, navigation }: GenscoA
     return counts;
   }, [allSites]);
   const { counts: statusCounts, totalSites: statusCountSites } = useMemo(
-    () => getSiteFilterCounts(allSites, brandFilters, search),
-    [allSites, brandFilters, search]
+    () => getSiteFilterCounts(allSites, brandFilters, search, stateFilter, regionFilter),
+    [allSites, brandFilters, search, stateFilter, regionFilter]
   );
 
   // Fill exactly the viewport space below the (variable-height) OSD header.
@@ -146,12 +152,14 @@ export const GenscoApp = ({ basename, notifications, http, navigation }: GenscoA
       return (
         (statusFilter === 'All' || site.filterStatuses.includes(statusFilter)) &&
         (brandFilters.size === 0 || (brandCode !== null && brandFilters.has(brandCode))) &&
+        (stateFilter === null || normalizeUsState(site.state) === stateFilter) &&
+        (regionFilter === null || getUsStateRegion(site.state) === regionFilter) &&
         (term === '' ||
           site.siteId.toLowerCase().includes(term) ||
           site.city.toLowerCase().includes(term))
       );
     });
-  }, [allSites, statusFilter, brandFilters, search]);
+  }, [allSites, statusFilter, brandFilters, stateFilter, regionFilter, search]);
 
   const { mapContainerRef, mapMoved, resetMapView } = useGenscoMap({
     allSites,
@@ -238,6 +246,16 @@ export const GenscoApp = ({ basename, notifications, http, navigation }: GenscoA
             <SearchBar value={search} onChange={setSearch} />
 
             <div className="float" id="top-right-stack">
+              <RegionFilterDropdown
+                selectedRegion={regionFilter}
+                sites={allSites}
+                onChange={setRegionFilter}
+              />
+              <StateFilterDropdown
+                selectedState={stateFilter}
+                sites={allSites}
+                onChange={setStateFilter}
+              />
               <BrandFilterPanel
                 selectedBrands={brandFilters}
                 counts={brandCounts}

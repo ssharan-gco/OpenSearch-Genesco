@@ -118,6 +118,30 @@ describe('getSiteFilterCounts', () => {
       totalSites: 1,
     });
   });
+
+  it('limits status counts to the selected state, including postal abbreviations', () => {
+    const californiaSite = createSite('ca-1', 'Underground Store', 'Los Angeles', ['Up']);
+    californiaSite.state = 'CA';
+
+    expect(
+      getSiteFilterCounts([...sites, californiaSite], new Set<BrandCode>(), '', 'California')
+    ).toEqual({
+      counts: { Up: 1 },
+      totalSites: 1,
+    });
+  });
+
+  it('limits status counts to the selected region, including state abbreviations', () => {
+    const californiaSite = createSite('ca-1', 'Underground Store', 'Los Angeles', ['Up']);
+    californiaSite.state = 'CA';
+
+    expect(
+      getSiteFilterCounts([...sites, californiaSite], new Set<BrandCode>(), '', null, 'West')
+    ).toEqual({
+      counts: { Up: 1 },
+      totalSites: 1,
+    });
+  });
 });
 
 describe('deriveStatus resource thresholds', () => {

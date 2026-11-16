@@ -452,7 +452,9 @@ body.gensco-header-brand-active .logoContainer::after {
     --dp-row-b:  #e2e8f0;
 
     #filter-panel,
-    #brand-filter-panel {
+    #brand-filter-panel,
+    #state-filter-panel,
+    #region-filter-panel {
       background: rgba(255,255,255,0.97);
       border-color: rgba(0,0,0,0.14);
       box-shadow: 0 4px 24px rgba(0,0,0,0.15);
@@ -785,7 +787,9 @@ body.gensco-header-brand-active .logoContainer::after {
     overflow-y: auto;
   }
   #filter-panel,
-  #brand-filter-panel {
+  #brand-filter-panel,
+  #state-filter-panel,
+  #region-filter-panel {
     background: var(--glass); border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: calc(10px * var(--ui-scale)) calc(10px * var(--ui-scale)) calc(6px * var(--ui-scale));
@@ -814,6 +818,54 @@ body.gensco-header-brand-active .logoContainer::after {
     font-size: calc(10px * var(--ui-scale)); font-weight: 700; color: var(--muted);
     text-align: center; margin-bottom: calc(8px * var(--ui-scale));
     text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  #state-filter-title {
+    font-size: calc(10px * var(--ui-scale)); font-weight: 700; color: var(--muted);
+    text-align: center; margin-bottom: calc(8px * var(--ui-scale));
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  #region-filter-title {
+    font-size: calc(10px * var(--ui-scale)); font-weight: 700; color: var(--muted);
+    text-align: center; margin-bottom: calc(8px * var(--ui-scale));
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .state-filter-trigger {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; padding: calc(6px * var(--ui-scale)) calc(9px * var(--ui-scale));
+    color: var(--text); border: 1px solid var(--border); border-radius: 6px;
+    background: rgba(255,255,255,0.06); font: inherit; text-align: left; cursor: pointer;
+  }
+  .state-filter-trigger-label { font-size: small; font-weight: bold; }
+  .state-filter-trigger:hover { background: rgba(255,255,255,0.12); }
+  .state-filter-chevron { color: var(--muted); font-size: calc(10px * var(--ui-scale)); }
+  .state-filter-menu {
+    margin-top: calc(6px * var(--ui-scale)); padding: calc(6px * var(--ui-scale));
+    border: 1px solid var(--border); border-radius: 6px; background: var(--glass);
+  }
+  .state-filter-search {
+    width: 100%; box-sizing: border-box; margin-bottom: calc(5px * var(--ui-scale));
+    padding: calc(6px * var(--ui-scale)) calc(8px * var(--ui-scale));
+    color: var(--text); border: 1px solid var(--border); border-radius: 5px;
+    background: rgba(0,0,0,0.18); font: inherit; font-size: calc(11px * var(--ui-scale));
+  }
+  .state-filter-search::placeholder { color: var(--muted); }
+  .state-filter-options { max-height: calc(220px * var(--ui-scale)); overflow-y: auto; }
+  .state-filter-option {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    width: 100%; padding: calc(5px * var(--ui-scale)) calc(7px * var(--ui-scale));
+    color: var(--text); border: 0; border-radius: 4px; background: transparent;
+    font: inherit; font-size: small; font-weight: bold; text-align: left; cursor: pointer;
+  }
+  .state-filter-option:hover { background: rgba(255,255,255,0.08); }
+  .state-filter-option.selected { background: rgba(37,99,235,0.35); }
+  .state-filter-count {
+    min-width: calc(24px * var(--ui-scale)); padding: 1px 5px; border-radius: 10px;
+    color: var(--muted); background: rgba(255,255,255,0.08); font-size: calc(10px * var(--ui-scale));
+    text-align: center;
+  }
+  .state-filter-empty {
+    padding: calc(8px * var(--ui-scale)); color: var(--muted);
+    font-size: calc(11px * var(--ui-scale)); text-align: center;
   }
   .brand-filter-pill {
     display: flex; align-items: center; gap: calc(7px * var(--ui-scale));
@@ -1226,7 +1278,9 @@ body.gensco-header-brand-active .logoContainer::after {
       max-height: 42%;
     }
     .enterprise-map-app #filter-panel,
-    .enterprise-map-app #brand-filter-panel { padding: 7px; }
+    .enterprise-map-app #brand-filter-panel,
+    .enterprise-map-app #state-filter-panel,
+    .enterprise-map-app #region-filter-panel { padding: 7px; }
     .enterprise-map-app .filter-pill,
     .enterprise-map-app .brand-filter-pill { padding: 4px 7px; margin-bottom: 2px; }
     #detail-panel { top: 3px; left: 3px; right: 3px; bottom: 3px; }

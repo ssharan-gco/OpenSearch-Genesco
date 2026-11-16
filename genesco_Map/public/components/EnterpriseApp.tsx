@@ -4,6 +4,8 @@ import { BrowserRouter as Router } from 'react-router-dom';
 import { ENTERPRISE_APP_ID } from '../../common';
 import { BRANDS, BrandCode, getBrandCode } from '../lib/brands';
 import { GenscoAppDeps, SiteRecord, StatusFilter } from '../lib/types';
+import { normalizeUsState, UsStateName } from '../lib/us_states';
+import { getUsStateRegion, UsRegionName } from '../lib/us_regions';
 import { createOsSearch } from '../services/searchClient';
 import {
   deriveEnterpriseFilterStatuses,
@@ -15,6 +17,8 @@ import { useEnterpriseMap } from '../hooks/useEnterpriseMap';
 import { BrandFilterPanel } from './BrandFilterPanel';
 import { FilterPanel } from './FilterPanel';
 import { SearchBar } from './SearchBar';
+import { StateFilterDropdown } from './state_filter_dropdown';
+import { RegionFilterDropdown } from './region_filter_dropdown';
 
 export const EnterpriseApp = ({ basename, notifications, http, navigation }: GenscoAppDeps) => {
   const osSearch = useRef(createOsSearch(http)).current;
@@ -26,6 +30,8 @@ export const EnterpriseApp = ({ basename, notifications, http, navigation }: Gen
   const [sampleMetrics, setSampleMetrics] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
   const [brandFilters, setBrandFilters] = useState<Set<BrandCode>>(() => new Set());
+  const [stateFilter, setStateFilter] = useState<UsStateName | null>(null);
+  const [regionFilter, setRegionFilter] = useState<UsRegionName | null>(null);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
@@ -88,12 +94,14 @@ export const EnterpriseApp = ({ basename, notifications, http, navigation }: Gen
       return (
         (statusFilter === 'All' || site.filterStatuses.includes(statusFilter)) &&
         (brandFilters.size === 0 || (brandCode !== null && brandFilters.has(brandCode))) &&
+        (stateFilter === null || normalizeUsState(site.state) === stateFilter) &&
+        (regionFilter === null || getUsStateRegion(site.state) === regionFilter) &&
         (term === '' ||
           site.siteId.toLowerCase().includes(term) ||
           site.city.toLowerCase().includes(term))
       );
     });
-  }, [enterpriseSites, statusFilter, brandFilters, search]);
+  }, [enterpriseSites, statusFilter, brandFilters, stateFilter, regionFilter, search]);
 
   const brandCounts = useMemo(() => {
     const counts = new Map<BrandCode, number>(BRANDS.map(({ code }) => [code, 0]));
@@ -104,8 +112,8 @@ export const EnterpriseApp = ({ basename, notifications, http, navigation }: Gen
     return counts;
   }, [allSites]);
   const { counts: statusCounts, totalSites: statusCountSites } = useMemo(
-    () => getSiteFilterCounts(enterpriseSites, brandFilters, search),
-    [enterpriseSites, brandFilters, search]
+    () => getSiteFilterCounts(enterpriseSites, brandFilters, search, stateFilter, regionFilter),
+    [enterpriseSites, brandFilters, search, stateFilter, regionFilter]
   );
 
   const { mapContainerRef, mapMoved, resetMapView } = useEnterpriseMap({
@@ -210,6 +218,16 @@ export const EnterpriseApp = ({ basename, notifications, http, navigation }: Gen
               <SearchBar value={search} onChange={setSearch} />
 
               <div className="float" id="top-right-stack">
+                <RegionFilterDropdown
+                  selectedRegion={regionFilter}
+                  sites={enterpriseSites}
+                  onChange={setRegionFilter}
+                />
+                <StateFilterDropdown
+                  selectedState={stateFilter}
+                  sites={enterpriseSites}
+                  onChange={setStateFilter}
+                />
                 <BrandFilterPanel
                   selectedBrands={brandFilters}
                   counts={brandCounts}

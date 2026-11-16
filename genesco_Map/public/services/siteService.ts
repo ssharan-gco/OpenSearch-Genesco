@@ -6,6 +6,8 @@ import { CFG, METRICS } from '../lib/constants';
 import { BrandCode, getBrandCode } from '../lib/brands';
 import { DASHBOARD_DEMO_SITE, sampleHealth } from '../lib/sampleData';
 import { ACTIVE_SITES } from '../lib/activeStores';
+import { normalizeUsState, UsStateName } from '../lib/us_states';
+import { getUsStateRegion, UsRegionName } from '../lib/us_regions';
 import {
   OsSearch,
   SiteHealth,
@@ -19,7 +21,9 @@ import { instantQuery } from './victoriaMetrics';
 export const getSiteFilterCounts = (
   sites: SiteRecord[],
   selectedBrands: ReadonlySet<BrandCode>,
-  search: string
+  search: string,
+  stateFilter: UsStateName | null = null,
+  regionFilter: UsRegionName | null = null
 ): { counts: { [key: string]: number }; totalSites: number } => {
   const counts: { [key: string]: number } = {};
   const term = search.trim().toLowerCase();
@@ -29,6 +33,8 @@ export const getSiteFilterCounts = (
     const brandCode = getBrandCode(site);
     if (
       (selectedBrands.size > 0 && (brandCode === null || !selectedBrands.has(brandCode))) ||
+      (stateFilter !== null && normalizeUsState(site.state) !== stateFilter) ||
+      (regionFilter !== null && getUsStateRegion(site.state) !== regionFilter) ||
       (term !== '' &&
         !site.siteId.toLowerCase().includes(term) &&
         !site.city.toLowerCase().includes(term))
