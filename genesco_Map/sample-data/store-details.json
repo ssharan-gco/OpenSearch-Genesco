@@ -1,0 +1,37 @@
+{
+  "storeNumber": "0869",
+  "storeName": "Wilmington, NC",
+  "address": "4320 Oleander Dr, Wilmington, NC",
+  "healthy": 2,
+  "degraded": 1,
+  "down": 1,
+  "processesUp": "21/24",
+  "servicesUp": "13/16",
+  "health": "78%",
+  "registers": [
+    {
+      "id": 2,
+      "name": "Register 2",
+      "uptime": "12d 4h 18m",
+      "status": "Healthy"
+    },
+    {
+      "id": 3,
+      "name": "Register 3",
+      "uptime": "3d 21h 5m",
+      "status": "Healthy"
+    },
+    {
+      "id": 4,
+      "name": "Register 4",
+      "uptime": "0d 1h 13m",
+      "status": "Down"
+    },
+    {
+      "id": 6,
+      "name": "Register 6",
+      "uptime": "27d 11h",
+      "status": "Degraded"
+    }
+  ]
+}
