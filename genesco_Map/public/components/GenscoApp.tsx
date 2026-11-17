@@ -243,19 +243,29 @@ export const GenscoApp = ({ basename, notifications, http, navigation }: GenscoA
               </button>
             )}
 
-            <SearchBar value={search} onChange={setSearch} />
+            <div className="float" id="bottom-search-stack">
+              <SearchBar value={search} onChange={setSearch} />
+              <div className="filter-location-row">
+                <StateFilterDropdown
+                  selectedState={stateFilter}
+                  selectedRegion={regionFilter}
+                  sites={allSites}
+                  onChange={setStateFilter}
+                />
+                <RegionFilterDropdown
+                  selectedRegion={regionFilter}
+                  sites={allSites}
+                  onChange={(region) => {
+                    setRegionFilter(region);
+                    if (region && stateFilter && getUsStateRegion(stateFilter) !== region) {
+                      setStateFilter(null);
+                    }
+                  }}
+                />
+              </div>
+            </div>
 
             <div className="float" id="top-right-stack">
-              <RegionFilterDropdown
-                selectedRegion={regionFilter}
-                sites={allSites}
-                onChange={setRegionFilter}
-              />
-              <StateFilterDropdown
-                selectedState={stateFilter}
-                sites={allSites}
-                onChange={setStateFilter}
-              />
               <BrandFilterPanel
                 selectedBrands={brandFilters}
                 counts={brandCounts}

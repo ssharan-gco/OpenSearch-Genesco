@@ -1,4 +1,4 @@
-import { normalizeUsState, UsStateName } from './us_states';
+import { normalizeUsState, US_STATES, UsStateName } from './us_states';
 
 export const US_REGIONS = [
   'North East',
@@ -67,3 +67,6 @@ export const getUsStateRegion = (state: string): UsRegionName | null => {
   const stateName = normalizeUsState(state);
   return stateName ? REGION_BY_STATE.get(stateName) ?? null : null;
 };
+
+export const getUsRegionStates = (region: UsRegionName | null): UsStateName[] =>
+  region ? STATES_BY_REGION[region] : US_STATES.map(({ name }) => name);

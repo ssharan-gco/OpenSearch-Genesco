@@ -215,19 +215,29 @@ export const EnterpriseApp = ({ basename, notifications, http, navigation }: Gen
                 </button>
               )}
 
-              <SearchBar value={search} onChange={setSearch} />
+              <div className="float" id="bottom-search-stack">
+                <SearchBar value={search} onChange={setSearch} />
+                <div className="filter-location-row">
+                  <StateFilterDropdown
+                    selectedState={stateFilter}
+                    selectedRegion={regionFilter}
+                    sites={enterpriseSites}
+                    onChange={setStateFilter}
+                  />
+                  <RegionFilterDropdown
+                    selectedRegion={regionFilter}
+                    sites={enterpriseSites}
+                    onChange={(region) => {
+                      setRegionFilter(region);
+                      if (region && stateFilter && getUsStateRegion(stateFilter) !== region) {
+                        setStateFilter(null);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
 
               <div className="float" id="top-right-stack">
-                <RegionFilterDropdown
-                  selectedRegion={regionFilter}
-                  sites={enterpriseSites}
-                  onChange={setRegionFilter}
-                />
-                <StateFilterDropdown
-                  selectedState={stateFilter}
-                  sites={enterpriseSites}
-                  onChange={setStateFilter}
-                />
                 <BrandFilterPanel
                   selectedBrands={brandFilters}
                   counts={brandCounts}

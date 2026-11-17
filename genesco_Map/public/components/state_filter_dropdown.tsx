@@ -1,15 +1,18 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { SiteLocation } from '../lib/types';
+import { getUsRegionStates, getUsStateRegion, UsRegionName } from '../lib/us_regions';
 import { normalizeUsState, US_STATES, UsStateName } from '../lib/us_states';
 
 interface StateFilterDropdownProps {
   selectedState: UsStateName | null;
+  selectedRegion: UsRegionName | null;
   sites: Pick<SiteLocation, 'state'>[];
   onChange: (state: UsStateName | null) => void;
 }
 
 export const StateFilterDropdown = ({
   selectedState,
+  selectedRegion,
   sites,
   onChange,
 }: StateFilterDropdownProps) => {
@@ -17,22 +20,32 @@ export const StateFilterDropdown = ({
   const [search, setSearch] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const regionSites = useMemo(
+    () =>
+      selectedRegion === null
+        ? sites
+        : sites.filter(({ state }) => getUsStateRegion(state) === selectedRegion),
+    [sites, selectedRegion]
+  );
+
   const counts = useMemo(() => {
     const stateCounts = new Map<UsStateName, number>(US_STATES.map(({ name }) => [name, 0]));
-    sites.forEach(({ state }) => {
+    regionSites.forEach(({ state }) => {
       const stateName = normalizeUsState(state);
       if (stateName) stateCounts.set(stateName, (stateCounts.get(stateName) || 0) + 1);
     });
     return stateCounts;
-  }, [sites]);
+  }, [regionSites]);
 
   const filteredStates = useMemo(() => {
     const term = search.trim().toLowerCase();
+    const regionStates = new Set(getUsRegionStates(selectedRegion));
     return US_STATES.filter(
       ({ code, name }) =>
-        term === '' || name.toLowerCase().includes(term) || code.toLowerCase().includes(term)
+        regionStates.has(name) &&
+        (term === '' || name.toLowerCase().includes(term) || code.toLowerCase().includes(term))
     );
-  }, [search]);
+  }, [search, selectedRegion]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -96,7 +109,7 @@ export const StateFilterDropdown = ({
               onClick={() => selectState(null)}
             >
               <span>All States</span>
-              <span className="state-filter-count">{sites.length}</span>
+              <span className="state-filter-count">{regionSites.length}</span>
             </button>
             {filteredStates.map(({ code, name }) => (
               <button

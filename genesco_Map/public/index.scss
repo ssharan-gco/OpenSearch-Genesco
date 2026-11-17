@@ -741,6 +741,32 @@ body.gensco-header-brand-active .logoContainer::after {
     box-shadow: 0 4px 24px rgba(0,0,0,0.55);
     transition: border-color 0.2s, background 0.2s;
   }
+  #bottom-search-stack {
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: grid;
+    grid-template-columns: minmax(300px, 1.5fr) repeat(2, minmax(140px, 1fr));
+    align-items: end;
+    gap: calc(6px * var(--ui-scale));
+    width: min(780px, calc(100% - 24px));
+  }
+  #bottom-search-stack #search-bar {
+    position: relative;
+    inset: auto;
+    transform: none;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+  }
+  #bottom-search-stack .filter-location-row {
+    display: contents;
+  }
+  #bottom-search-stack .filter-location-row > #state-filter-panel,
+  #bottom-search-stack .filter-location-row > #region-filter-panel {
+    width: 100%;
+  }
   #search-bar.active { background: rgba(44,62,80,0.95); border-color: rgba(44,62,80,0.9); }
   #search-icon { font-size: 14px; color: var(--muted); flex-shrink: 0; }
   #search-label {
@@ -785,7 +811,10 @@ body.gensco-header-brand-active .logoContainer::after {
     flex-direction: column;
     gap: calc(8px * var(--ui-scale));
     overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
+  #top-right-stack::-webkit-scrollbar { display: none; }
   #filter-panel,
   #brand-filter-panel,
   #state-filter-panel,
@@ -828,6 +857,19 @@ body.gensco-header-brand-active .logoContainer::after {
     font-size: calc(10px * var(--ui-scale)); font-weight: 700; color: var(--muted);
     text-align: center; margin-bottom: calc(8px * var(--ui-scale));
     text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .filter-location-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: calc(8px * var(--ui-scale));
+    width: 100%;
+  }
+  .filter-location-row > #state-filter-panel,
+  .filter-location-row > #region-filter-panel {
+    min-width: 0;
+    box-sizing: border-box;
+    padding-left: calc(6px * var(--ui-scale));
+    padding-right: calc(6px * var(--ui-scale));
   }
   .state-filter-trigger {
     display: flex; align-items: center; justify-content: space-between;
@@ -1256,6 +1298,12 @@ body.gensco-header-brand-active .logoContainer::after {
     .store-register-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @media (max-width: 650px) {
+    #bottom-search-stack {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      width: calc(100% - 16px);
+    }
+    #bottom-search-stack #search-bar { grid-column: 1 / -1; }
+    #bottom-search-stack .filter-location-row { display: contents; }
     .enterprise-map-app #enterprise-overview {
       top: 6px;
       left: 6px;

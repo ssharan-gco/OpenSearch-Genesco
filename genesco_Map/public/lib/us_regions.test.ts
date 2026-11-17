@@ -1,4 +1,4 @@
-import { getUsStateRegion, US_REGIONS } from './us_regions';
+import { getUsRegionStates, getUsStateRegion, US_REGIONS } from './us_regions';
 import { US_STATES } from './us_states';
 
 describe('US regions', () => {
@@ -23,5 +23,15 @@ describe('US regions', () => {
 
   it('returns null for values that are not a US state', () => {
     expect(getUsStateRegion('Ontario')).toBeNull();
+  });
+
+  it('returns only states assigned to a selected region', () => {
+    expect(getUsRegionStates('West')).toEqual([
+      'Alaska',
+      'California',
+      'Hawaii',
+      'Oregon',
+      'Washington',
+    ]);
   });
 });
