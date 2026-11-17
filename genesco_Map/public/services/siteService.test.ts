@@ -13,6 +13,7 @@ import {
   deriveEnterpriseStatus,
   deriveFilterStatuses,
   deriveStatus,
+  buildSiteRecords,
   fetchSiteRecords,
   getSiteFilterCounts,
 } from './siteService';
@@ -69,7 +70,7 @@ describe('getSiteFilterCounts', () => {
     zip: '',
     lat: 0,
     lon: 0,
-    status: filterStatuses[0] || 'NoStatus',
+    status: filterStatuses[0] || 'Down',
     filterStatuses,
     health: { up: true, services: {}, cpu: null, memory: null },
   });
@@ -78,7 +79,7 @@ describe('getSiteFilterCounts', () => {
     createSite('ug-1', 'Underground Store', 'Nashville', ['Up']),
     createSite('ug-2', 'Underground Store', 'Memphis', ['Warning', 'Registers Down']),
     createSite('jk-1', 'Journeys Kidz Store', 'Knoxville', ['Down']),
-    createSite('jm-1', 'Johnston & Murphy Store', 'Franklin', ['NoStatus']),
+    createSite('jm-1', 'Johnston & Murphy Store', 'Franklin', ['Down']),
     createSite('jm-ca-1', 'J&M Factory Store', 'Toronto', ['Up']),
   ];
 
@@ -153,6 +154,43 @@ describe('deriveStatus resource thresholds', () => {
     ...overrides,
   });
 
+  it('classifies stores without current health as Store Down', () => {
+    const missingHealth = buildSiteRecords(
+      [
+        {
+          siteId: 'missing-health',
+          name: 'Missing Health Store',
+          address: '',
+          city: 'Seattle',
+          state: 'WA',
+          zip: '',
+          lat: 47.6,
+          lon: -122.3,
+        },
+        {
+          siteId: 'reporting-store',
+          name: 'Reporting Store',
+          address: '',
+          city: 'Portland',
+          state: 'OR',
+          zip: '',
+          lat: 45.5,
+          lon: -122.6,
+        },
+      ],
+      new Map([['reporting-store', createHealth()]])
+    ).records.find(({ siteId }) => siteId === 'missing-health');
+
+    expect(deriveStatus(undefined)).toBe('Down');
+    expect(deriveStatus(createHealth({ up: null }))).toBe('Down');
+    expect(missingHealth).toMatchObject({
+      status: 'Down',
+      filterStatuses: ['Down'],
+    });
+    expect(deriveEnterpriseStatus(createHealth({ up: null }))).toBe('Down');
+    expect(deriveEnterpriseFilterStatuses(createHealth({ up: null }))).toEqual(['Down']);
+  });
+
   describe('Enterprise status thresholds', () => {
     const createHealth = (overrides: Partial<SiteHealth> = {}): SiteHealth => ({
       up: true,
@@ -202,8 +240,9 @@ describe('deriveStatus resource thresholds', () => {
     expect(statusAt(79.99)).toBe('Up');
     expect(statusAt(80)).toBe('Warning');
     expect(statusAt(97.99)).toBe('Warning');
-    expect(statusAt(98)).toBe('Registers Down');
-    expect(statusAt(100)).toBe('Registers Down');
+    expect(statusAt(98)).toBe('Down');
+    expect(statusAt(100)).toBe('Down');
+    expect(deriveFilterStatuses(createHealth({ [field]: 98 }))).toEqual(['Down', 'Registers Down']);
   });
 
   it('maps an unassigned stopped service to Attention Required', () => {
@@ -211,9 +250,9 @@ describe('deriveStatus resource thresholds', () => {
     expect(displayLabel('Warning')).toBe('Attention Required');
     expect(displayLabel('Registers Down')).toBe('Registers Down');
     expect(deriveStatus(createHealth({ services: { 'POS 1 service-a': false } }))).toBe('Warning');
-    expect(
-      deriveFilterStatuses(createHealth({ services: { 'POS 1 service-a': false } }))
-    ).toEqual(['Warning']);
+    expect(deriveFilterStatuses(createHealth({ services: { 'POS 1 service-a': false } }))).toEqual([
+      'Warning',
+    ]);
     expect(deriveStatus(createHealth({ registersDegraded: true }))).toBe('Warning');
     expect(
       deriveStatus(
@@ -225,7 +264,7 @@ describe('deriveStatus resource thresholds', () => {
     ).toBe('Warning');
   });
 
-  it('uses Attention Required when only some registers are down, and Registers Down when all are down', () => {
+  it('uses Attention Required for partial outages and Store Down for all-register outages', () => {
     const partiallyDown = createHealth({
       services: { 'POS 1 service-a': false, 'POS 2 service-a': true },
       registersDown: undefined,
@@ -243,8 +282,8 @@ describe('deriveStatus resource thresholds', () => {
       memory: 88,
       registerStatuses: { '1': 'Down', '2': 'Down' },
     });
-    expect(deriveStatus(allDown)).toBe('Registers Down');
-    expect(deriveFilterStatuses(allDown)).toEqual(['Registers Down', 'Down']);
+    expect(deriveStatus(allDown)).toBe('Down');
+    expect(deriveFilterStatuses(allDown)).toEqual(['Down', 'Registers Down']);
   });
 
   it('includes a site with all registers down in App Services Down and Registers Down', () => {
@@ -255,7 +294,7 @@ describe('deriveStatus resource thresholds', () => {
       })
     );
 
-    expect(filterStatuses).toEqual(['Registers Down', 'Down']);
+    expect(filterStatuses).toEqual(['Down', 'Registers Down']);
   });
 
   it('includes a partial register outage only in Registers Down, not App Services Down', () => {
@@ -272,7 +311,7 @@ describe('deriveStatus resource thresholds', () => {
   it('does not include a site with a down register process in Attention Required without a resource warning', () => {
     expect(
       deriveFilterStatuses(createHealth({ registersDown: true, registerProcessesDown: true }))
-    ).toEqual(['Registers Down', 'Down']);
+    ).toEqual(['Down', 'Registers Down']);
   });
 
   it('prioritizes a down register over service warnings and resource warnings', () => {
@@ -285,7 +324,7 @@ describe('deriveStatus resource thresholds', () => {
           services: { 'POS 1 service-a': false },
         })
       )
-    ).toBe('Registers Down');
+    ).toBe('Down');
   });
 
   it.each([
@@ -296,8 +335,8 @@ describe('deriveStatus resource thresholds', () => {
     [80, 82.6, 97.99].forEach((value) => {
       const health = createHealth({ registersDown: true, [field]: value });
 
-      expect(deriveStatus(health)).toBe('Registers Down');
-      expect(deriveFilterStatuses(health)).toEqual(['Registers Down', 'Down']);
+      expect(deriveStatus(health)).toBe('Down');
+      expect(deriveFilterStatuses(health)).toEqual(['Down', 'Registers Down']);
     });
   });
 
@@ -319,12 +358,12 @@ describe('deriveStatus resource thresholds', () => {
 
   it('does not add Attention Required when a resource is below 80% or at least 98%', () => {
     expect(deriveFilterStatuses(createHealth({ registersDown: true, memory: 79.99 }))).toEqual([
-      'Registers Down',
       'Down',
+      'Registers Down',
     ]);
     expect(deriveFilterStatuses(createHealth({ registersDown: true, memory: 98 }))).toEqual([
-      'Registers Down',
       'Down',
+      'Registers Down',
     ]);
   });
 

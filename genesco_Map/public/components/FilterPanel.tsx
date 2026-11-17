@@ -42,12 +42,6 @@ const FILTERS: FilterDef[] = [
     color: '#a855f7',
     def: 'Store is in end-of-day processing or scheduled maintenance.',
   },
-  {
-    label: 'No Status',
-    value: 'NoStatus',
-    color: '#94a3b8',
-    def: 'No live health data is available for this store.',
-  },
 ];
 
 interface FilterPanelProps {

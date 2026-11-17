@@ -39,9 +39,9 @@ const getZoomScale = (zoom: number) => {
 const buildHealthPopup = (site: SiteRecord, status: SiteStatus) => {
   const operationalStatuses: { [register: string]: 'Up' | 'Down' } =
     site.health.operationalRegisterStatuses ||
-    Object.entries(site.health.registerStatuses || {}).reduce<
-      { [register: string]: 'Up' | 'Down' }
-    >((statuses, [register, registerStatus]) => {
+    Object.entries(site.health.registerStatuses || {}).reduce<{
+      [register: string]: 'Up' | 'Down';
+    }>((statuses, [register, registerStatus]) => {
       statuses[register] = registerStatus === 'Down' ? 'Down' : 'Up';
       return statuses;
     }, {});
@@ -58,7 +58,7 @@ const buildHealthPopup = (site: SiteRecord, status: SiteStatus) => {
           })
           .join('');
   const location = [site.city, site.state].filter(Boolean).join(', ');
-  const color = STATUS_COLORS[status] || STATUS_COLORS.NoStatus;
+  const color = STATUS_COLORS[status] || STATUS_COLORS.Down;
 
   return (
     `<div class="enterprise-health-popup">` +
@@ -150,7 +150,7 @@ export function useEnterpriseMap({
       element.style.border = '0';
       element.style.padding = '0';
       element.style.lineHeight = '0';
-      element.innerHTML = pinSvg(STATUS_COLORS[displayedStatus] || STATUS_COLORS.NoStatus);
+      element.innerHTML = pinSvg(STATUS_COLORS[displayedStatus] || STATUS_COLORS.Down);
       element.addEventListener('click', (event) => {
         event.stopPropagation();
         popupRef.current?.remove();

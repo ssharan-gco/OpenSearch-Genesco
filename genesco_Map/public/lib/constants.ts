@@ -52,13 +52,11 @@ export const STATUS_COLORS: { [key: string]: string } = {
   Warning: '#e0a030',
   'Registers Down': '#ec4899',
   'EOD / Maintenance': '#a855f7',
-  NoStatus: '#94a3b8',
 };
 
-export const getColor = (s: string) => STATUS_COLORS[s] || STATUS_COLORS.NoStatus;
+export const getColor = (s: string) => STATUS_COLORS[s] || STATUS_COLORS.Down;
 
 export const displayLabel = (s: string) => {
-  if (s === 'NoStatus') return 'No Status';
   if (s === 'Down') return 'Store Down';
   if (s === 'Warning') return 'Attention Required';
   return s;

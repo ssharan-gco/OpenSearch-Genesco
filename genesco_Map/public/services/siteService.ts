@@ -8,13 +8,7 @@ import { DASHBOARD_DEMO_SITE, sampleHealth } from '../lib/sampleData';
 import { ACTIVE_SITES } from '../lib/activeStores';
 import { normalizeUsState, UsStateName } from '../lib/us_states';
 import { getUsStateRegion, UsRegionName } from '../lib/us_regions';
-import {
-  OsSearch,
-  SiteHealth,
-  SiteLocation,
-  SiteRecord,
-  SiteStatus,
-} from '../lib/types';
+import { OsSearch, SiteHealth, SiteLocation, SiteRecord, SiteStatus } from '../lib/types';
 import { fetchAllStoreHealth } from './registerMetrics';
 import { instantQuery } from './victoriaMetrics';
 
@@ -107,24 +101,22 @@ export const fetchAllSiteHealth = async (): Promise<Map<string, SiteHealth>> => 
 
 /** Host outage takes precedence over maintenance, register outage, and resource status. */
 export const deriveStatus = (h: SiteHealth | undefined): SiteStatus => {
-  if (!h || h.up === null) return 'NoStatus';
+  if (!h || h.up === null) return 'Down';
   if (!h.up) return 'Down';
   if (h.maintenance) return 'EOD / Maintenance';
   const registerStatuses = Object.values(h.registerStatuses || {});
   const allRegistersDown =
-    registerStatuses.length > 0 && registerStatuses.every((registerStatus) => registerStatus === 'Down');
+    registerStatuses.length > 0 &&
+    registerStatuses.every((registerStatus) => registerStatus === 'Down');
   const someRegistersDown = registerStatuses.some((registerStatus) => registerStatus === 'Down');
-  if (allRegistersDown) return 'Registers Down';
+  if (allRegistersDown) return 'Down';
   if (someRegistersDown) return 'Warning';
   const resourceDown =
     (h.cpu ?? 0) >= CFG.resourceDownPct ||
     (h.memory ?? 0) >= CFG.resourceDownPct ||
     (h.disk ?? 0) >= CFG.resourceDownPct;
-  if (h.registersDown || resourceDown) {
-    return 'Registers Down';
-  }
-  const anyServiceDown =
-    registerStatuses.length === 0 && Object.values(h.services).some((v) => !v);
+  if (h.registersDown || resourceDown) return 'Down';
+  const anyServiceDown = registerStatuses.length === 0 && Object.values(h.services).some((v) => !v);
   if (anyServiceDown) return 'Warning';
   const hot =
     (h.cpu ?? 0) >= CFG.resourceWarnPct ||
@@ -135,17 +127,14 @@ export const deriveStatus = (h: SiteHealth | undefined): SiteStatus => {
 
 export const deriveFilterStatuses = (h: SiteHealth | undefined): SiteStatus[] => {
   const status = deriveStatus(h);
-  if (!h || h.up === null || h.maintenance || status === 'NoStatus') {
+  if (!h || h.up === null) return ['Down'];
+  if (h.maintenance) {
     return [status];
   }
   const registerStatuses = Object.values(h.registerStatuses || {});
   const anyRegisterDown =
-    Boolean(h.registersDown) || registerStatuses.some((registerStatus) => registerStatus === 'Down');
-  const allRegistersDown =
     Boolean(h.registersDown) ||
-    (registerStatuses.length > 0 &&
-      registerStatuses.every((registerStatus) => registerStatus === 'Down'));
-
+    registerStatuses.some((registerStatus) => registerStatus === 'Down');
   const hasDegradedResource = [h.cpu, h.memory, h.disk].some(
     (value) =>
       value !== null &&
@@ -166,29 +155,23 @@ export const deriveFilterStatuses = (h: SiteHealth | undefined): SiteStatus[] =>
     return filterStatuses;
   }
 
-  if (allRegistersDown) {
-    return [status, 'Down'];
-  }
-
   const filterStatuses: SiteStatus[] = [status];
-  if (anyRegisterDown && !filterStatuses.includes('Registers Down')) {
+  if ((anyRegisterDown || hasDownResource) && !filterStatuses.includes('Registers Down')) {
     filterStatuses.push('Registers Down');
   }
-  if (hasDegradedResource) filterStatuses.push('Warning');
+  if (hasDegradedResource && status !== 'Down') filterStatuses.push('Warning');
   return Array.from(new Set(filterStatuses));
 };
 
 /** Enterprise health ignores resource thresholds and uses operational register/service signals only. */
 export const deriveEnterpriseStatus = (h: SiteHealth | undefined): SiteStatus => {
-  if (!h || h.up === null) return 'NoStatus';
+  if (!h || h.up === null) return 'Down';
   if (!h.up) return 'Down';
   if (h.maintenance) return 'EOD / Maintenance';
 
   const operationalStatuses = h.operationalRegisterStatuses
     ? Object.values(h.operationalRegisterStatuses)
-    : Object.values(h.registerStatuses || {}).map((status) =>
-        status === 'Down' ? 'Down' : 'Up'
-      );
+    : Object.values(h.registerStatuses || {}).map((status) => (status === 'Down' ? 'Down' : 'Up'));
   const allRegistersDown =
     operationalStatuses.length > 0 && operationalStatuses.every((status) => status === 'Down');
   if (allRegistersDown || (!h.operationalRegisterStatuses && h.registersDown)) {

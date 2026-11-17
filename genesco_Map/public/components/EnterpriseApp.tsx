@@ -123,7 +123,7 @@ export const EnterpriseApp = ({ basename, notifications, http, navigation }: Gen
     search,
   });
   const healthSummary = useMemo(() => {
-    const summary = { total: allSites.length, healthy: 0, attention: 0, down: 0, noData: 0 };
+    const summary = { total: allSites.length, healthy: 0, attention: 0, down: 0 };
     enterpriseSites.forEach(({ status }) => {
       if (status === 'Up') summary.healthy += 1;
       else if (
@@ -133,7 +133,6 @@ export const EnterpriseApp = ({ basename, notifications, http, navigation }: Gen
       ) {
         summary.attention += 1;
       } else if (status === 'Down') summary.down += 1;
-      else summary.noData += 1;
     });
     return summary;
   }, [enterpriseSites]);
@@ -191,10 +190,6 @@ export const EnterpriseApp = ({ basename, notifications, http, navigation }: Gen
                   <div className="enterprise-kpi is-down">
                     <span className="enterprise-kpi-label">Down</span>
                     <strong>{healthSummary.down}</strong>
-                  </div>
-                  <div className="enterprise-kpi is-no-data">
-                    <span className="enterprise-kpi-label">No data</span>
-                    <strong>{healthSummary.noData}</strong>
                   </div>
                 </div>
                 {usingSample && (

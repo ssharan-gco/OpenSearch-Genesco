@@ -1,8 +1,7 @@
 import { CoreStart } from '../../../../src/core/public';
 import { NavigationPublicPluginStart } from '../../../../src/plugins/navigation/public';
 
-export type SiteStatus =
-  'Up' | 'Down' | 'Warning' | 'Registers Down' | 'EOD / Maintenance' | 'NoStatus';
+export type SiteStatus = 'Up' | 'Down' | 'Warning' | 'Registers Down' | 'EOD / Maintenance';
 export type StatusFilter = 'All' | SiteStatus;
 
 /** Static site info (from the sites index). */
