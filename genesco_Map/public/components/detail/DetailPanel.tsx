@@ -14,6 +14,8 @@ import {
   RegisterVersionDetails,
 } from '../../services/registerVersions';
 import { ErrorAnalysisChart } from './ErrorAnalysisChart';
+import { RegisterNoteEditor } from './RegisterNoteEditor';
+import { RegisterNotes, RegisterNotesClient, normalizeNoteRegisterId } from '../../services/registerNotes';
 import { getHealthHistoryBuckets } from './status_history';
 
 const COMMONLY_USED_RANGES = [
@@ -38,6 +40,7 @@ interface DetailPanelProps {
   timeWindow: TimeWindow;
   onTimeChange: (start: string, end: string) => void;
   osSearch: OsSearch;
+  registerNotesClient: RegisterNotesClient;
   timeZone: string;
   refreshToken: number;
   onRefresh: () => void;
@@ -212,6 +215,7 @@ export const DetailPanel = ({
   timeWindow,
   onTimeChange,
   osSearch,
+  registerNotesClient,
   timeZone,
   refreshToken,
   onRefresh,
@@ -227,6 +231,54 @@ export const DetailPanel = ({
   const [registerVersions, setRegisterVersions] = useState<RegisterVersionDetails[]>([]);
   const [versionLoadError, setVersionLoadError] = useState<string | null>(null);
   const [versionLoading, setVersionLoading] = useState(true);
+  const [registerNotes, setRegisterNotes] = useState<RegisterNotes>({});
+  const [registerNotesError, setRegisterNotesError] = useState('');
+  const notesRevisionRef = useRef(0);
+  useEffect(() => {
+    let cancelled = false;
+    let loadingNotes = false;
+    setRegisterNotes({});
+    setRegisterNotesError('');
+    const refreshNotes = async () => {
+      if (loadingNotes) return;
+      loadingNotes = true;
+      const revisionAtStart = notesRevisionRef.current;
+      try {
+        // The shared client checks for Healthy samples since note creation
+        // and resolves stale incident comments before returning notes.
+        const notes = await registerNotesClient.readStore(site.siteId);
+        if (!cancelled && notesRevisionRef.current === revisionAtStart) {
+          setRegisterNotes(notes);
+          setRegisterNotesError('');
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setRegisterNotesError(`Unable to load comments: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      } finally {
+        loadingNotes = false;
+      }
+    };
+    refreshNotes();
+    // Detect recoveries while this detail page remains open, without changing
+    // any existing register-health refresh or selected historical time range.
+    const timer = window.setInterval(refreshNotes, 60_000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [site.siteId, registerNotesClient]);
+
+  const saveRegisterNote = async (registerId: string, incidentNumber: string, statusUpdate: string) => {
+    const note = await registerNotesClient.save(site.siteId, registerId, incidentNumber, statusUpdate);
+    notesRevisionRef.current += 1;
+    setRegisterNotes((current) => {
+      const next = { ...current };
+      const key = normalizeNoteRegisterId(registerId);
+      if (note) next[key] = note;
+      else delete next[key];
+      return next;
+    });
+    setRegisterNotesError('');
+  };
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -587,6 +639,7 @@ export const DetailPanel = ({
               title="Register Depth View"
               subtitle="Live process, service, and resource metrics"
             />
+            {registerNotesError && <div className="register-comment-error" role="alert">{registerNotesError}</div>}
             {versionLoadError && (
               <div className="store-live-state down-text">
                 Unable to load Xstore version details: {versionLoadError}
@@ -607,7 +660,16 @@ export const DetailPanel = ({
                         </small>
                       </div>
                       <div className="store-register-health">
-                        <StatusBadge status={register.status} />
+                        <div className="register-comment-status-row">
+                          {(register.status === 'Degraded' || register.status === 'Down') && (
+                            <RegisterNoteEditor
+                              registerId={register.id}
+                              note={registerNotes[normalizeNoteRegisterId(register.id)]}
+                              onSave={saveRegisterNote}
+                            />
+                          )}
+                          <StatusBadge status={register.status} />
+                        </div>
                         <strong>{register.uptime}</strong>
                         <small>SYSTEM UPTIME</small>
                       </div>

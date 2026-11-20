@@ -750,6 +750,13 @@ body.gensco-header-brand-active .logoContainer::after {
     gap: calc(6px * var(--ui-scale));
     width: min(780px, calc(100% - 24px));
   }
+  #bottom-search-stack #search-control-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: calc(6px * var(--ui-scale));
+    min-width: 0;
+  }
   #bottom-search-stack #search-bar {
     position: relative;
     inset: auto;
@@ -804,7 +811,7 @@ body.gensco-header-brand-active .logoContainer::after {
   #top-right-stack {
     top: calc(10px * var(--ui-scale));
     right: calc(10px * var(--ui-scale));
-    width: calc(260px * var(--ui-scale));
+    width: calc(238px * var(--ui-scale));
     max-height: calc(100% - 20px);
     display: flex;
     flex-direction: column;
@@ -851,6 +858,19 @@ body.gensco-header-brand-active .logoContainer::after {
     font-size: calc(10px * var(--ui-scale)); font-weight: 700; color: var(--muted);
     text-align: center; margin-bottom: calc(8px * var(--ui-scale));
     text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  #region-filter-panel {
+    position: relative;
+  }
+  #region-filter-panel .state-filter-menu {
+    position: absolute;
+    z-index: 9999;
+    top: auto;
+    bottom: 100%;
+    right: 0;
+    left: 0;
+    margin-top: 0;
+    margin-bottom: calc(6px * var(--ui-scale));
   }
   #region-filter-title {
     font-size: calc(10px * var(--ui-scale)); font-weight: 700; color: var(--muted);
@@ -975,7 +995,11 @@ body.gensco-header-brand-active .logoContainer::after {
 
   /* Reset view */
   #reset-view-btn {
-    bottom: 58px; left: 50%; transform: translateX(-50%);
+    position: relative;
+    bottom: auto;
+    left: auto;
+    align-self: center;
+    transform: none;
     background: rgba(15,23,42,0.88);
     border: 1px solid rgba(148,163,184,0.35);
     border-radius: 20px; padding: 7px 18px; cursor: pointer;
@@ -1301,7 +1325,7 @@ body.gensco-header-brand-active .logoContainer::after {
       grid-template-columns: repeat(2, minmax(0, 1fr));
       width: calc(100% - 16px);
     }
-    #bottom-search-stack #search-bar { grid-column: 1 / -1; }
+    #bottom-search-stack #search-control-stack { grid-column: 1 / -1; }
     #bottom-search-stack .filter-location-row { display: contents; }
     .enterprise-map-app #enterprise-overview {
       top: 6px;
@@ -1321,7 +1345,7 @@ body.gensco-header-brand-active .logoContainer::after {
       top: auto;
       right: 6px;
       bottom: 58px;
-      width: min(230px, calc(100% - 20px));
+      width: min(208px, calc(100% - 20px));
       max-height: 42%;
     }
     .enterprise-map-app #filter-panel,
@@ -1361,4 +1385,205 @@ body.gensco-header-brand-active .logoContainer::after {
 
   @keyframes sm-spin { to { transform: rotate(360deg); } }
   @keyframes sm-slide-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+
+  /* NOAA weather alerts: shared overlay controls for IT and USERS maps. */
+  .genesco-weather-widget {
+    position: absolute;
+    z-index: 620;
+    bottom: 12px;
+    left: 12px;
+    width: min(326px, calc(100% - 24px));
+    font-size: 12px;
+    color: #f8fafc;
+  }
+  .genesco-weather-widget-controls { display: flex; align-items: center; gap: 6px; }
+  .genesco-weather-widget-toggle,
+  .genesco-weather-widget-expand {
+    appearance: none;
+    border: 1px solid rgba(255,255,255,0.24);
+    border-radius: 24px;
+    background: rgba(15,23,42,0.97);
+    box-shadow: 0 3px 12px rgba(0,0,0,.35);
+    color: #f8fafc;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 7px 11px;
+    cursor: pointer;
+  }
+  .genesco-weather-widget-toggle.is-active { border-color: #f87171; }
+  .genesco-weather-widget-toggle > span:first-child { margin-right: 5px; font-size: 14px; }
+  .genesco-weather-widget-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #4b5563;
+    border-radius: 12px;
+    min-width: 22px;
+    margin-left: 8px;
+    padding: 2px 6px;
+  }
+  .genesco-weather-widget-expand { width: 32px; height: 31px; padding: 0; }
+  .genesco-weather-widget-list {
+    background: rgba(17,24,39,.97);
+    border: 1px solid rgba(255,255,255,.17);
+    border-radius: 9px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.35);
+    margin-top: 7px;
+    padding: 11px;
+    max-height: min(400px, 54vh);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: hidden;
+  }
+  .genesco-weather-widget-description { font-size: 11px; color: #cbd5e1; line-height: 1.45; }
+  .genesco-weather-widget-tools { display: flex; align-items: center; justify-content: space-between; }
+  .genesco-weather-widget-tools span { color: #fca5a5; font-weight: 700; }
+  .genesco-weather-widget-tools button { background: #374151; color: white; border: 0; padding: 3px 8px; border-radius: 5px; cursor: pointer; }
+  .genesco-weather-widget-search {
+    width: 100%; border-radius: 6px; border: 1px solid #475569;
+    background: #263342; color: #f8fafc; padding: 9px; font-size: 12px;
+  }
+  .genesco-weather-widget-muted { font-size: 11px; color: #aab6c7; }
+  .genesco-weather-widget-warning { font-size: 11px; color: #fbbf24; overflow-wrap: anywhere; }
+  .genesco-weather-widget-note { font-size: 10px; color: #94a3b8; line-height: 1.3; }
+  .genesco-weather-widget-groups { overflow: auto; min-height: 0; }
+  .genesco-weather-widget-group { border-top: 1px solid #334155; }
+  .genesco-weather-widget-state,
+  .genesco-weather-widget-alert {
+    display: flex; width: 100%; color: #e2e8f0; cursor: pointer;
+    text-align: left; border: 0; background: none;
+  }
+  .genesco-weather-widget-state {
+    padding: 8px 3px; align-items: center; justify-content: space-between; font-weight: 700;
+  }
+  .genesco-weather-widget-state > span { display: inline-flex; align-items: center; gap: 7px; }
+  .genesco-weather-red-dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; }
+  .genesco-weather-widget-alert { padding: 7px 10px 7px 19px; flex-direction: column; gap: 3px; border-radius: 5px; }
+  .genesco-weather-widget-alert:hover:not(:disabled) { background: rgba(37,99,235,.22); }
+  .genesco-weather-widget-alert strong { font-size: 11px; }
+  .genesco-weather-widget-alert span,
+  .genesco-weather-widget-alert small { font-size: 10px; color: #cbd5e1; }
+  .genesco-weather-widget-unmapped-details { padding: 5px 10px 10px 20px; color: #cbd5e1; font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
+  .genesco-weather-widget-unmapped-details p { margin-top: 5px; max-height: 100px; overflow-y: auto; }
+  .genesco-weather-widget-alert:disabled { cursor: not-allowed; opacity: .65; }
+  .genesco-weather-map-popup .maplibregl-popup-content {
+    padding: 12px; border-radius: 8px; border: 1px solid #475569;
+    background: rgba(15,23,42,.97); color: #fff;
+  }
+  .genesco-weather-map-popup .maplibregl-popup-close-button { color: #f8fafc; padding: 0 7px; }
+  .genesco-weather-map-popup.maplibregl-popup-anchor-bottom .maplibregl-popup-tip { border-top-color: #0f172a; }
+  .genesco-weather-map-popup.maplibregl-popup-anchor-top .maplibregl-popup-tip { border-bottom-color: #0f172a; }
+  .genesco-weather-popup { font-size: 11px; line-height: 1.45; }
+  .genesco-weather-popup > strong { display: block; margin-right: 14px; font-size: 13px; }
+  .genesco-weather-popup > p { margin-top: 7px; }
+  .genesco-weather-popup-level { color: #fca5a5; font-weight: 700; margin-top: 3px; }
+  .genesco-weather-popup-stores-title { margin-top: 8px; font-weight: 700; }
+  .genesco-weather-popup-stores { margin-top: 5px; font-weight: 400; }
+  .genesco-weather-popup-note { font-size: 10px; color: #aebacd; margin-top: 7px; }
+  @media (max-width: 650px) {
+    .genesco-weather-widget { bottom: 62px; left: 7px; width: min(285px, calc(100% - 14px)); }
+    .genesco-weather-widget-list { max-height: 42vh; }
+  }
 }
+
+/* Register incident details: editing only in IT; click-to-view in both maps. */
+.register-comment-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 5px;
+}
+.register-comment-control { position: relative; text-align: right; }
+.register-comment-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.register-comment-add, .register-comment-edit {
+  border: 1px solid rgba(148, 163, 184, .45);
+  border-radius: 4px;
+  height: 16px;
+  padding: 0 5px;
+  color: #e2e8f0;
+  background: rgba(51, 65, 85, .88);
+  font-size: 9px;
+  cursor: pointer;
+  line-height: 14px;
+}
+.register-comment-add { background: rgba(15, 92, 64, .88); border-color: #15803d; }
+.register-comment-add:not(:disabled):hover { background: #166534; }
+.register-comment-edit:not(:disabled):hover { background: rgba(71, 85, 105, .95); }
+.register-comment-add:disabled, .register-comment-edit:disabled {
+  opacity: .35; cursor: not-allowed;
+}
+.register-comment-info, .enterprise-register-note-info {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; flex: 0 0 16px;
+  padding: 0; border: 1px solid #facc15; border-radius: 50%;
+  color: #111827; background: #facc15;
+  font-size: 10px; font-weight: 800; line-height: 1;
+  cursor: pointer;
+}
+.register-comment-info:focus-visible, .enterprise-register-note-info:focus-visible {
+  outline: 2px solid #fff; outline-offset: 2px;
+}
+.register-comment-info[aria-expanded='true'], .enterprise-register-note-info[aria-expanded='true'] {
+  background: #fef08a; border-color: #fde047;
+}
+.register-comment-editor, .register-incident-details {
+  position: absolute; right: 0; top: calc(100% + 6px);
+  z-index: 110; width: 270px; max-width: min(270px, 82vw);
+  box-sizing: border-box; padding: 11px;
+  background: #111c2e; border: 1px solid #64748b;
+  border-radius: 7px; box-shadow: 0 9px 26px rgba(0,0,0,.58);
+  color: #e2e8f0; text-align: left;
+}
+.register-comment-editor-title { display: block; font-size: 12px; margin-bottom: 10px; }
+.register-comment-editor label { display: block; font-size: 10px; font-weight: 700; margin: 9px 0 4px; }
+.register-comment-editor label span { color: #fbbf24; }
+.register-comment-editor input, .register-comment-editor textarea {
+  width: 100%; box-sizing: border-box;
+  background: #1e293b; border: 1px solid #475569; border-radius: 4px;
+  padding: 7px; font-family: inherit; font-size: 11px; color: #f8fafc;
+}
+.register-comment-editor textarea { min-height: 75px; resize: vertical; }
+.register-comment-editor input:focus, .register-comment-editor textarea:focus {
+  outline: 1px solid #fbbf24; border-color: #fbbf24;
+}
+.register-comment-clear-hint { display: block; margin-top: 6px; color: #94a3b8; font-size: 9px; }
+.register-comment-editor-footer { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 9px; }
+.register-comment-editor-footer > span { margin-right: auto; font-size: 9px; color: #94a3b8; }
+.register-comment-editor-footer button {
+  border: 1px solid #475569; border-radius: 4px; background: #334155;
+  color: #f8fafc; padding: 4px 8px; cursor: pointer; font-size: 10px;
+}
+.register-comment-editor-footer button:last-child { background: #2563eb; border-color: #3b82f6; }
+.register-comment-editor-footer button:disabled { cursor: not-allowed; opacity: .5; }
+.register-comment-error { color: #fca5a5; font-size: 11px; margin: 6px 0 0; }
+.register-incident-details-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.register-incident-details-heading strong { font-size: 12px; }
+.register-incident-details-heading button {
+  color: #cbd5e1; background: transparent; border: none; cursor: pointer;
+  font-size: 18px; line-height: 1;
+}
+.register-incident-field { margin-top: 7px; }
+.register-incident-field > span { display: block; font-size: 10px; font-weight: 700; color: #fbbf24; }
+.register-incident-field p {
+  margin: 3px 0 0; font-size: 11px; color: #f8fafc;
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.enterprise-register-note-status { display: inline-flex; gap: 7px; align-items: center; }
+.enterprise-register-note-wrapper { position: relative; display: inline-flex; align-items: center; }
+.enterprise-register-incident-card {
+  display: flex; flex-direction: column; gap: 4px;
+  position: absolute; right: 0; top: calc(100% + 7px); z-index: 100;
+  width: 225px; max-width: min(225px, 70vw); box-sizing: border-box;
+  padding: 10px; white-space: normal; overflow-wrap: anywhere; text-align: left;
+  background: #111c2e; border: 1px solid #facc15; border-radius: 7px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.64); color: #f8fafc;
+  font-size: 11px; font-weight: 400; line-height: 1.45;
+}
+.enterprise-register-incident-card[hidden] { display: none !important; }
+.enterprise-register-incident-heading { color: #fff !important; font-size: 12px !important; margin-bottom: 3px; }
+.enterprise-register-incident-label { color: #fbbf24; font-weight: 700; font-size: 10px; margin-top: 3px; }
+.enterprise-register-incident-value { color: #f8fafc; white-space: pre-wrap; }
+.enterprise-register-incident-empty { color: #f8fafc; font-size: 11px; line-height: 1.45; }

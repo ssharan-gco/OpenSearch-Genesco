@@ -11,6 +11,9 @@ import { BrandCode, BRANDS, getBrandCode } from '../lib/brands';
 import { resolveTimeWindow } from '../lib/timeRange';
 import { getStoreMapKey } from '../lib/storeMapKey';
 import { createOsSearch } from '../services/searchClient';
+import { createRegisterNotesClient } from '../services/registerNotes';
+import { useWeatherAlerts } from '../hooks/useWeatherAlerts';
+import { WeatherAlertsPanel } from './WeatherAlertsPanel';
 import { fetchSiteRecords, getSiteFilterCounts } from '../services/siteService';
 import { useGenscoMap } from '../hooks/useGenscoMap';
 import { SearchBar } from './SearchBar';
@@ -29,6 +32,7 @@ const detectSystemTimeZone = () => {
    ================================================================ */
 export const GenscoApp = ({ basename, notifications, http, navigation }: GenscoAppDeps) => {
   const osSearch = useRef(createOsSearch(http)).current;
+  const registerNotesClient = useRef(createRegisterNotesClient(http)).current;
   const onRegisterMetricsError = useCallback(
     (error: Error) =>
       notifications.toasts.addError(error, { title: 'Failed to load live register metrics' }),
@@ -44,6 +48,15 @@ export const GenscoApp = ({ basename, notifications, http, navigation }: GenscoA
   const [stateFilter, setStateFilter] = useState<UsStateName | null>(null);
   const [regionFilter, setRegionFilter] = useState<UsRegionName | null>(null);
   const [search, setSearch] = useState('');
+  const {
+    alerts: weatherAlerts,
+    loading: weatherLoading,
+    error: weatherError,
+    refresh: refreshWeather,
+  } = useWeatherAlerts(osSearch);
+  const [showWeatherAlerts, setShowWeatherAlerts] = useState(false);
+  const [focusedWeatherAlertId, setFocusedWeatherAlertId] = useState<string | null>(null);
+  const [weatherFocusRevision, setWeatherFocusRevision] = useState(0);
   const [timeStart, setTimeStart] = useState('now-5m');
   const [timeEnd, setTimeEnd] = useState('now');
   const [timeZone, setTimeZone] = useState(detectSystemTimeZone);
@@ -166,6 +179,10 @@ export const GenscoApp = ({ basename, notifications, http, navigation }: GenscoA
     filteredSites,
     statusFilter,
     search,
+    weatherAlerts,
+    showWeatherAlerts,
+    focusedWeatherAlertId,
+    weatherFocusRevision,
     onSelectSite: setSelectedSiteId,
   });
 
@@ -232,19 +249,20 @@ export const GenscoApp = ({ basename, notifications, http, navigation }: GenscoA
               </div>
             )}
 
-            {mapMoved && (
-              <button
-                className="float"
-                id="reset-view-btn"
-                onClick={resetMapView}
-                title="Return to initial map position"
-              >
-                ⌖ Reset View
-              </button>
-            )}
-
             <div className="float" id="bottom-search-stack">
-              <SearchBar value={search} onChange={setSearch} />
+              <div id="search-control-stack">
+                {mapMoved && (
+                  <button
+                    className="float"
+                    id="reset-view-btn"
+                    onClick={resetMapView}
+                    title="Return to initial map position"
+                  >
+                    ⌖ Reset View
+                  </button>
+                )}
+                <SearchBar value={search} onChange={setSearch} />
+              </div>
               <div className="filter-location-row">
                 <StateFilterDropdown
                   selectedState={stateFilter}
@@ -264,6 +282,19 @@ export const GenscoApp = ({ basename, notifications, http, navigation }: GenscoA
                 />
               </div>
             </div>
+
+            <WeatherAlertsPanel
+              alerts={weatherAlerts}
+              loading={weatherLoading}
+              error={weatherError}
+              visible={showWeatherAlerts}
+              onVisibleChange={setShowWeatherAlerts}
+              onRefresh={refreshWeather}
+              onFocus={(alert) => {
+                setFocusedWeatherAlertId(alert.id);
+                setWeatherFocusRevision((current) => current + 1);
+              }}
+            />
 
             <div className="float" id="top-right-stack">
               <BrandFilterPanel
@@ -296,6 +327,7 @@ export const GenscoApp = ({ basename, notifications, http, navigation }: GenscoA
                   setTimeEnd(end);
                 }}
                 osSearch={osSearch}
+                registerNotesClient={registerNotesClient}
                 timeZone={timeZone}
                 refreshToken={detailRefreshTrigger}
                 onRefresh={() => setDetailRefreshTrigger((current) => current + 1)}

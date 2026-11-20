@@ -1,0 +1,37 @@
+GENESCO REGISTER COMMENTS - RECOVERY LIFECYCLE UPDATE
+====================================================
+Starting point: latest GenesCo map with weather, State/Region filtering, and IT/USERS comments.
+
+NEW BEHAVIOR:
+- Add note to an unhealthy register in IT; USERS reads the same note.
+- A VictoriaMetrics HEALTHY sample after a note's last save time closes that incident.
+- On next note read, the old note is hidden and a timestamp-conditional cleanup request
+  removes it from OpenSearch index `genesco-register-notes` (with write permission).
+- If the register goes Down again, it starts with "No updates for this register" in USERS.
+  IT re-enables Add, disables Edit, and permits a new incident entry.
+- A Healthy sample before the note was entered never clears it.
+- Down, Warning, and missing telemetry samples do NOT imply recovery.
+- Notes are rechecked every minute while IT detail is open; USERS checks on popup open.
+- Both DEV/PROD use their own existing comment index and live VM data.
+- All existing map, weather, status, brand, State and Region logic is unchanged.
+
+TECHNICAL:
+- The new route POST /api/genesco_map/register_notes/{storeId}/{registerId}/resolve
+  deletes only when the saved `updatedAt` still matches the request; uses OpenSearch
+  seq_no/primary_term to avoid deleting concurrent edits.
+- GET for notes uses VM health history from the note's timestamp up to the current time.
+- Recovery mechanics are unchanged. The register-note index now also accepts incidentNumber;
+  existing OpenSearch indexes add it dynamically. No new dependencies or Go changes.
+
+IMPORTANT LIMITATION:
+- Automatic cleanup is triggered when notes are read or IT store detail is open, not
+  by an always-on backend monitor. If all UIs are closed, cleanup occurs upon a later
+  note read provided VM retained a relevant Healthy sample. If no such historical
+  sample is available, do not claim recovery/auto-delete without better telemetry.
+
+INSTALL:
+- Back up the existing `OSD38/plugins/genesco_Map` folder.
+- Unzip the FULL updated ZIP to `OSD38/plugins/` (contains `genesco_Map/`).
+- Run `yarn install --ignore-engines` in the plugin folder only if needed.
+- Restart OSD using `yarn start --no-base-path` in OSD38 root.
+- Deploy server + frontend files together. No Go changes.
