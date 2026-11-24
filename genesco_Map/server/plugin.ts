@@ -9,6 +9,7 @@ import {
 import { SampleMapPluginSetup, SampleMapPluginStart } from './types';
 import { SampleMapConfig } from './index';
 import { defineRoutes } from './routes';
+import { registerRegisterNotesRoutes } from './routes/registerNotes';
 
 export class SampleMapPlugin implements Plugin<SampleMapPluginSetup, SampleMapPluginStart> {
   private readonly logger: Logger;
@@ -28,7 +29,9 @@ export class SampleMapPlugin implements Plugin<SampleMapPluginSetup, SampleMapPl
       this.vmBaseUrl = cfg.victoriaMetricsUrl;
     });
 
-    defineRoutes(core.http.createRouter(), () => this.vmBaseUrl);
+    const router = core.http.createRouter();
+    defineRoutes(router, () => this.vmBaseUrl);
+    registerRegisterNotesRoutes(router);
     return {};
   }
 

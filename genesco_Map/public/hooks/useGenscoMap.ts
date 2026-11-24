@@ -4,6 +4,8 @@ import { Map as Maplibre, Marker, NavigationControl, Popup } from 'maplibre-gl';
 import { CFG, displayLabel, escapeHtml, getColor, pinSvg, STATUS_COLORS } from '../lib/constants';
 import { createPluginMap, destroyPluginMap } from '../lib/maplibreMap';
 import { getStoreMapKey } from '../lib/storeMapKey';
+import { createWeatherMapOverlay, WeatherOverlayController } from '../lib/weatherMapOverlay';
+import { WeatherAlert } from '../lib/weatherAlerts';
 import { SiteRecord, StatusFilter } from '../lib/types';
 
 interface UseGenscoMapArgs {
@@ -11,6 +13,10 @@ interface UseGenscoMapArgs {
   filteredSites: SiteRecord[];
   statusFilter: StatusFilter;
   search: string;
+  weatherAlerts: WeatherAlert[];
+  showWeatherAlerts: boolean;
+  focusedWeatherAlertId: string | null;
+  weatherFocusRevision: number;
   onSelectSite: (siteId: string) => void;
 }
 
@@ -65,10 +71,21 @@ export function useGenscoMap({
   filteredSites,
   statusFilter,
   search,
+  weatherAlerts,
+  showWeatherAlerts,
+  focusedWeatherAlertId,
+  weatherFocusRevision,
   onSelectSite,
 }: UseGenscoMapArgs) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Maplibre | null>(null);
+  const weatherOverlayRef = useRef<WeatherOverlayController | null>(null);
+  const weatherAlertsRef = useRef(weatherAlerts);
+  weatherAlertsRef.current = weatherAlerts;
+  const showWeatherRef = useRef(showWeatherAlerts);
+  showWeatherRef.current = showWeatherAlerts;
+  const weatherFocusRef = useRef(focusedWeatherAlertId);
+  weatherFocusRef.current = focusedWeatherAlertId;
   const popupRef = useRef<Popup | null>(null);
   const markersRef = useRef<Map<string, Marker>>(new Map());
   const stickyPopupRef = useRef(false);
@@ -203,6 +220,9 @@ export function useGenscoMap({
 
     map.on('load', () => {
       readyRef.current = true;
+      weatherOverlayRef.current = createWeatherMapOverlay(map);
+      weatherOverlayRef.current.update(weatherAlertsRef.current, allRef.current, showWeatherRef.current);
+      if (weatherFocusRef.current) weatherOverlayRef.current.focus(weatherFocusRef.current);
       syncMarkers(map, filteredRef.current);
       map.on('zoom', () => updateMarkerSizes(map));
       fitDefaultView(map);
@@ -211,6 +231,8 @@ export function useGenscoMap({
     return () => {
       window.removeEventListener('resize', onResize);
       readyRef.current = false;
+      weatherOverlayRef.current?.destroy();
+      weatherOverlayRef.current = null;
       popupRef.current?.remove();
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current.clear();
@@ -241,6 +263,15 @@ export function useGenscoMap({
       });
     }
   }, [filteredSites, search, statusFilter]);
+
+  // Weather polygons are independent of store pins, health and location filters.
+  useEffect(() => {
+    weatherOverlayRef.current?.update(weatherAlerts, allSites, showWeatherAlerts);
+  }, [weatherAlerts, allSites, showWeatherAlerts]);
+
+  useEffect(() => {
+    if (focusedWeatherAlertId) weatherOverlayRef.current?.focus(focusedWeatherAlertId);
+  }, [focusedWeatherAlertId, weatherFocusRevision]);
 
   return { mapContainerRef, mapMoved, resetMapView };
 }
