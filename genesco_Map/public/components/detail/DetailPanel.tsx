@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import moment from 'moment-timezone';
 import { CFG } from '../../lib/constants';
+import { DASHBOARD_AUTO_REFRESH_MS } from '../../lib/autoRefresh';
+import { STORE_INCIDENT_SCOPE } from '../../lib/storeIncident';
 import { OsSearch, SiteRecord, TimeWindow } from '../../lib/types';
 import {
-  calculateStoreHealth,
   fetchStoreRegisterDashboard,
   StoreRegister,
   StatusHistoryPoint,
@@ -234,6 +235,8 @@ export const DetailPanel = ({
   const [registerNotes, setRegisterNotes] = useState<RegisterNotes>({});
   const [registerNotesError, setRegisterNotesError] = useState('');
   const notesRevisionRef = useRef(0);
+  const lastDashboardStoreRef = useRef<string | null>(null);
+  const lastVersionsStoreRef = useRef<string | null>(null);
   useEffect(() => {
     let cancelled = false;
     let loadingNotes = false;
@@ -262,7 +265,9 @@ export const DetailPanel = ({
     refreshNotes();
     // Detect recoveries while this detail page remains open, without changing
     // any existing register-health refresh or selected historical time range.
-    const timer = window.setInterval(refreshNotes, 60_000);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void refreshNotes();
+    }, DASHBOARD_AUTO_REFRESH_MS);
     return () => { cancelled = true; window.clearInterval(timer); };
   }, [site.siteId, registerNotesClient]);
 
@@ -283,8 +288,13 @@ export const DetailPanel = ({
     let cancelled = false;
     setLoading(true);
     setLoadError(null);
-    setDashboard(null);
-    setLastRefreshedAt(null);
+    // Keep the current register cards (and any open editor) mounted during
+    // each 30-second refresh. Clear them only when switching stores.
+    if (lastDashboardStoreRef.current !== site.siteId) {
+      setDashboard(null);
+      setLastRefreshedAt(null);
+      lastDashboardStoreRef.current = site.siteId;
+    }
     fetchStoreRegisterDashboard(site.siteId, timeWindow)
       .then((data) => {
         if (!cancelled) {
@@ -309,7 +319,10 @@ export const DetailPanel = ({
   useEffect(() => {
     let cancelled = false;
     setVersionLoading(true);
-    setRegisterVersions([]);
+    if (lastVersionsStoreRef.current !== site.siteId) {
+      setRegisterVersions([]);
+      lastVersionsStoreRef.current = site.siteId;
+    }
     setVersionLoadError(null);
     fetchStoreRegisterVersions(osSearch, site.siteId)
       .then((versions) => {
@@ -344,7 +357,6 @@ export const DetailPanel = ({
   const runningProcessCount = registerCounts.processesUp;
   const serviceCount = registerCounts.services;
   const runningServiceCount = registerCounts.servicesUp;
-  const storeHealth = calculateStoreHealth(registers);
   const location = [
     site.address,
     [site.city, [site.state, site.zip].filter(Boolean).join(' ')].filter(Boolean).join(', '),
@@ -505,13 +517,24 @@ export const DetailPanel = ({
             value={`${runningServiceCount}/${serviceCount}`}
             sub={trackedPerRegisterLabel(registers.map((register) => register.services.length))}
           />
-          <SummaryCard
-            label="Store Health (range)"
-            value={storeHealth === null ? '—' : `${storeHealth.toFixed(1)}%`}
-            sub="Healthy 100% · warning 50% · down 0%"
-            tone={storeHealth === 100 ? 'healthy' : undefined}
-          />
         </div>
+
+        {/* Store-scoped fallback only when no register card can be identified.
+            Per-register incident controls remain unchanged for known registers. */}
+        {dashboard !== null && !loadError && registers.length === 0 && (
+          <div className="store-no-register-incident">
+            <div className="store-no-register-incident-label">
+              <strong>Store incident / status update</strong>
+              <span>No register data available — add an update for this store</span>
+            </div>
+            <RegisterNoteEditor
+              registerId={STORE_INCIDENT_SCOPE}
+              scopeLabel={`Store #${site.siteId}`}
+              note={registerNotes[STORE_INCIDENT_SCOPE]}
+              onSave={saveRegisterNote}
+            />
+          </div>
+        )}
 
         <div className="dp-body store-dashboard-body">
           {!loading && !loadError && staleRegisters.length > 0 && (
@@ -661,7 +684,7 @@ export const DetailPanel = ({
                       </div>
                       <div className="store-register-health">
                         <div className="register-comment-status-row">
-                          {(register.status === 'Degraded' || register.status === 'Down') && (
+                          {(register.status === 'Degraded' || register.status === 'Down' || register.status === 'No data') && (
                             <RegisterNoteEditor
                               registerId={register.id}
                               note={registerNotes[normalizeNoteRegisterId(register.id)]}

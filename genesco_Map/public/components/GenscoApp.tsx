@@ -13,6 +13,7 @@ import { getStoreMapKey } from '../lib/storeMapKey';
 import { createOsSearch } from '../services/searchClient';
 import { createRegisterNotesClient } from '../services/registerNotes';
 import { useWeatherAlerts } from '../hooks/useWeatherAlerts';
+import { DASHBOARD_AUTO_REFRESH_MS } from '../lib/autoRefresh';
 import { WeatherAlertsPanel } from './WeatherAlertsPanel';
 import { fetchSiteRecords, getSiteFilterCounts } from '../services/siteService';
 import { useGenscoMap } from '../hooks/useGenscoMap';
@@ -189,29 +190,58 @@ export const GenscoApp = ({ basename, notifications, http, navigation }: GenscoA
   /* ── MAP DATA ── */
   useEffect(() => {
     let cancelled = false;
+    let inFlight = false;
+    let firstLoad = true;
+    let errorReported = false;
     const load = async () => {
-      setLoading(true);
+      // Do not overlap slow VictoriaMetrics requests or reset UI during polling.
+      if (cancelled || inFlight) return;
+      inFlight = true;
+      if (firstLoad) setLoading(true);
       try {
-        const {
-          records,
-          sampleSites: sample,
-          sampleMetrics: sm,
-        } = await fetchSiteRecords(osSearch);
+        const { records, sampleSites: sample, sampleMetrics: sm } = await fetchSiteRecords(osSearch);
         if (cancelled) return;
         setAllSites(records);
         setSampleSites(sample);
         setSampleMetrics(sm);
-      } catch (e: any) {
-        notifications.toasts.addError(e, { title: 'Failed to load Gensco map data' });
+        errorReported = false;
+      } catch (cause: any) {
+        if (!cancelled && !errorReported) {
+          notifications.toasts.addError(cause, { title: 'Failed to load Gensco map data' });
+          errorReported = true;
+        }
       } finally {
+        inFlight = false;
+        firstLoad = false;
         if (!cancelled) setLoading(false);
       }
     };
-    load();
+    void load();
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void load();
+    }, DASHBOARD_AUTO_REFRESH_MS);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void load();
+    };
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
       cancelled = true;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [osSearch, notifications]);
+
+  // The manual refresh button and this timer use the same selected-store refresh token.
+  // Re-resolving relative time windows on each tick keeps the Store Health range current.
+  useEffect(() => {
+    if (!selectedSiteId) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        setDetailRefreshTrigger((current) => current + 1);
+      }
+    }, DASHBOARD_AUTO_REFRESH_MS);
+    return () => window.clearInterval(timer);
+  }, [selectedSiteId]);
 
   const selectedSite = allSites.find((s) => getStoreMapKey(s) === selectedSiteId) || null;
   const usingSample = sampleSites || sampleMetrics;

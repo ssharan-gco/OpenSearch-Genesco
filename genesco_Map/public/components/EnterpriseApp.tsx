@@ -9,6 +9,7 @@ import { getUsStateRegion, UsRegionName } from '../lib/us_regions';
 import { createOsSearch } from '../services/searchClient';
 import { createRegisterNotesClient } from '../services/registerNotes';
 import { useWeatherAlerts } from '../hooks/useWeatherAlerts';
+import { DASHBOARD_AUTO_REFRESH_MS } from '../lib/autoRefresh';
 import { WeatherAlertsPanel } from './WeatherAlertsPanel';
 import {
   deriveEnterpriseFilterStatuses,
@@ -49,29 +50,47 @@ export const EnterpriseApp = ({ basename, notifications, http, navigation }: Gen
 
   useEffect(() => {
     let cancelled = false;
+    let inFlight = false;
+    let firstLoad = true;
+    let errorReported = false;
     const load = async () => {
-      setLoading(true);
+      // Skip overlapping requests and keep current map data when a poll fails.
+      if (cancelled || inFlight) return;
+      inFlight = true;
+      if (firstLoad) setLoading(true);
       try {
-        const {
-          records,
-          sampleSites: sample,
-          sampleMetrics: metricsAreSample,
-        } = await fetchSiteRecords(osSearch);
+        const { records, sampleSites: sample, sampleMetrics: metricsAreSample } =
+          await fetchSiteRecords(osSearch);
         if (cancelled) return;
         setAllSites(records);
         setSampleSites(sample);
         setSampleMetrics(metricsAreSample);
+        errorReported = false;
       } catch (error) {
-        notifications.toasts.addError(error instanceof Error ? error : new Error(String(error)), {
-          title: 'Failed to load enterprise store health',
-        });
+        if (!cancelled && !errorReported) {
+          notifications.toasts.addError(error instanceof Error ? error : new Error(String(error)), {
+            title: 'Failed to load enterprise store health',
+          });
+          errorReported = true;
+        }
       } finally {
+        inFlight = false;
+        firstLoad = false;
         if (!cancelled) setLoading(false);
       }
     };
-    load();
+    void load();
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void load();
+    }, DASHBOARD_AUTO_REFRESH_MS);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void load();
+    };
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
       cancelled = true;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [osSearch, notifications]);
 

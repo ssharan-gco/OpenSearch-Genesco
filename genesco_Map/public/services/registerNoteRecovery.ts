@@ -1,5 +1,6 @@
 import type { StoreRegister, StoreRegisterDashboard } from './registerMetrics';
 import type { RegisterNote, RegisterNotes } from './registerNotes';
+import { STORE_INCIDENT_SCOPE } from '../lib/storeIncident';
 
 const normalizeNoteRegisterId = (id: string) => {
   const value = String(id).trim();
@@ -25,6 +26,15 @@ export const notesWithObservedRecovery = (
   );
   return Object.values(notes).filter((note) => {
     const savedMs = Date.parse(note.updatedAt);
+    if (note.registerId === STORE_INCIDENT_SCOPE) {
+      // Store fallback is only for periods with no identifiable register.
+      // Clear it only after an actual register sample arrives after the note.
+      // Existing samples and missing telemetry are never treated as recovery.
+      return Number.isFinite(savedMs) && dashboard.registers.some(
+        (register) => register.lastMetricTimestamp !== null &&
+          register.lastMetricTimestamp > savedMs
+      );
+    }
     const register = registers.get(normalizeNoteRegisterId(note.registerId));
     if (!Number.isFinite(savedMs) || !register) return false;
     return register.healthTimeline.some(

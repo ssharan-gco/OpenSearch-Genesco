@@ -88,6 +88,8 @@ export function useGenscoMap({
   weatherFocusRef.current = focusedWeatherAlertId;
   const popupRef = useRef<Popup | null>(null);
   const markersRef = useRef<Map<string, Marker>>(new Map());
+  const markerSignatureRef = useRef('');
+  const lastSearchFocusRef = useRef('');
   const stickyPopupRef = useRef(false);
   const readyRef = useRef(false);
   const homeRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
@@ -145,14 +147,16 @@ export function useGenscoMap({
         element.style.padding = '0';
         element.style.lineHeight = '0';
         element.innerHTML = pinSvg(STATUS_COLORS[displayedStatus]);
-        element.addEventListener('mouseenter', () => showPopup(map, site, false));
+        const siteKey = getStoreMapKey(site);
+        const currentSite = () => allRef.current.find((record) => getStoreMapKey(record) === siteKey) || site;
+        element.addEventListener('mouseenter', () => showPopup(map, currentSite(), false));
         element.addEventListener('mouseleave', () => {
           if (!stickyPopupRef.current) popupRef.current?.remove();
         });
         element.addEventListener('click', (event) => {
           event.stopPropagation();
-          showPopup(map, site, true);
-          onSelectRef.current(getStoreMapKey(site));
+          showPopup(map, currentSite(), true);
+          onSelectRef.current(siteKey);
         });
 
         markersRef.current.set(
@@ -164,6 +168,17 @@ export function useGenscoMap({
       });
 
     updateMarkerSizes(map);
+  };
+
+  // Skip marker teardown when a 30-second poll reports the same statuses.
+  // This leaves an open popup and the user's current map view alone.
+  const syncMarkersIfChanged = (map: Maplibre, sites: SiteRecord[]) => {
+    const signature = sites.map((site) =>
+      `${getStoreMapKey(site)}:${site.status}:${getDisplayedStatus(site)}`
+    ).join('|');
+    if (markerSignatureRef.current === signature) return;
+    markerSignatureRef.current = signature;
+    syncMarkers(map, sites);
   };
 
   const fitDefaultView = (map: Maplibre) => {
@@ -223,7 +238,7 @@ export function useGenscoMap({
       weatherOverlayRef.current = createWeatherMapOverlay(map);
       weatherOverlayRef.current.update(weatherAlertsRef.current, allRef.current, showWeatherRef.current);
       if (weatherFocusRef.current) weatherOverlayRef.current.focus(weatherFocusRef.current);
-      syncMarkers(map, filteredRef.current);
+      syncMarkersIfChanged(map, filteredRef.current);
       map.on('zoom', () => updateMarkerSizes(map));
       fitDefaultView(map);
     });
@@ -236,16 +251,16 @@ export function useGenscoMap({
       popupRef.current?.remove();
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current.clear();
+      markerSignatureRef.current = '';
       destroyPluginMap(map);
       mapRef.current = null;
     };
   }, []);
 
-  /* ── Re-fit when the site list changes ── */
+  /* ── Update pin status on polling, without resetting zoom/position ── */
   useEffect(() => {
     if (mapRef.current && readyRef.current) {
-      syncMarkers(mapRef.current, filteredRef.current);
-      fitDefaultView(mapRef.current);
+      syncMarkersIfChanged(mapRef.current, filteredRef.current);
     }
   }, [allSites]);
 
@@ -253,8 +268,11 @@ export function useGenscoMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
-    syncMarkers(map, filteredSites);
-    if (search.trim() !== '' && filteredSites.length === 1) {
+    syncMarkersIfChanged(map, filteredSites);
+    // A polling tick should never re-run the user's search animation.
+    const focusKey = search.trim() !== '' && filteredSites.length === 1
+      ? `${search.trim().toLowerCase()}:${getStoreMapKey(filteredSites[0])}` : '';
+    if (focusKey && focusKey !== lastSearchFocusRef.current) {
       const s = filteredSites[0];
       map.easeTo({
         center: [s.lon, s.lat],
@@ -262,6 +280,7 @@ export function useGenscoMap({
         duration: 600,
       });
     }
+    lastSearchFocusRef.current = focusKey;
   }, [filteredSites, search, statusFilter]);
 
   // Weather polygons are independent of store pins, health and location filters.

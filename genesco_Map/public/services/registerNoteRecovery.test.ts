@@ -30,6 +30,23 @@ describe('register note recovery lifecycle', () => {
     expect(notesWithObservedRecovery(notes, dashboard([[60_000, 1]], '01')).map((note) => note.registerId)).toEqual(['1']);
     expect(notesWithObservedRecovery(notes, dashboard([[60_000, 1]], '3'))).toEqual([]);
   });
+  it('keeps a store-scoped incident while the store has no identifiable register', () => {
+    const storeNotes: RegisterNotes = {
+      STORE: { storeId: '0569', registerId: 'STORE', incidentNumber: 'INC12345', comment: 'Investigating', updatedAt: new Date(t0).toISOString() },
+    };
+    expect(notesWithObservedRecovery(storeNotes, { oldestSampleAt: t0, registers: [] })).toEqual([]);
+  });
+  it('clears store-scoped incidents only when register telemetry returns after saving', () => {
+    const storeNotes: RegisterNotes = {
+      STORE: { storeId: '0569', registerId: 'STORE', incidentNumber: 'INC12345', comment: 'Investigating', updatedAt: new Date(t0).toISOString() },
+    };
+    const withSample = (offsetMs: number | null) => ({ oldestSampleAt: t0, registers: [{
+      id: '1', lastMetricTimestamp: offsetMs === null ? null : t0 + offsetMs, healthTimeline: [],
+    }] }) as StoreRegisterDashboard;
+    expect(notesWithObservedRecovery(storeNotes, withSample(null))).toEqual([]);
+    expect(notesWithObservedRecovery(storeNotes, withSample(-30_000))).toEqual([]);
+    expect(notesWithObservedRecovery(storeNotes, withSample(120_000)).map((note) => note.registerId)).toEqual(['STORE']);
+  });
   it('uses note timestamps rather than any selected historical dashboard time range', () => {
     const window = noteRecoveryWindow(notes, t0 + 7200_000);
     expect(window).toEqual({ fromMs: t0 - 60_000, toMs: t0 + 7200_000 });

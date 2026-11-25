@@ -15,6 +15,9 @@ backend is unavailable, the view identifies when sample locations or health are 
 The earlier detailed Gensco component remains in the source but is not mounted by the current
 app.
 
+Side-nav visibility follows the authenticated OpenSearch roles: `Genesco_Users` sees only
+**genesco -USERS**, `Genesco_IT` sees only **genesco - IT**, and admin or other roles see both.
+
 ---
 
 ## 1. Folder layout
@@ -27,7 +30,8 @@ genesco_Map/
 ├─ server/
 │  ├─ index.ts                  config schema: sample_map.victoriaMetricsUrl
 │  ├─ plugin.ts                 reads config, registers routes
-│  └─ routes/index.ts           GET /api/sample_map/vm/query and /query_range -> VictoriaMetrics
+│  ├─ routes/index.ts           GET /api/sample_map/vm/query and /query_range -> VictoriaMetrics
+│  └─ routes/userRoles.ts       current user's OpenSearch roles for map navigation
 ├─ public/
 │  ├─ plugin.ts                 registers both map apps + nav-group links
 │  ├─ application.tsx           React 18 mount/unmount for both map apps

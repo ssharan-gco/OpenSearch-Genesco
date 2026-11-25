@@ -1124,7 +1124,7 @@ body.gensco-header-brand-active .logoContainer::after {
     margin-left: auto; color: #fbbf24; font-size: 8px; font-weight: 800; letter-spacing: 0.1em; white-space: nowrap;
   }
   .dp-cards {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px;
+    display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px;
     padding: 7px 10px; background: #0b111c; flex-shrink: 0;
   }
   .dp-card {
@@ -1317,7 +1317,7 @@ body.gensco-header-brand-active .logoContainer::after {
     .sample-map-refresh-btn { width: 44px; min-width: 44px; }
     .sample-map-container .sample-map-timezone { max-width: 190px; gap: 4px; }
     .sample-map-timezone-current { max-width: 100px; }
-    .dp-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .dp-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .store-register-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @media (max-width: 650px) {
@@ -1488,6 +1488,20 @@ body.gensco-header-brand-active .logoContainer::after {
   }
 }
 
+/* Store-level incident fallback only when the IT detail view has zero registers. */
+.store-no-register-incident {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  position: relative; z-index: 2; flex-shrink: 0; min-width: 0;
+  padding: 9px 12px; background: #101e2f; border-top: 1px solid rgba(148,163,184,.18);
+  border-bottom: 1px solid rgba(148,163,184,.18);
+}
+.store-no-register-incident-label { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.store-no-register-incident-label strong { color: #e2e8f0; font-size: 11px; }
+.store-no-register-incident-label span { color: #94a3b8; font-size: 10px; }
+@media (max-width: 480px) {
+  .store-no-register-incident { align-items: flex-start; flex-wrap: wrap; }
+}
+
 /* Register incident details: editing only in IT; click-to-view in both maps. */
 .register-comment-status-row {
   display: flex;
@@ -1517,10 +1531,10 @@ body.gensco-header-brand-active .logoContainer::after {
 }
 .register-comment-info, .enterprise-register-note-info {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 16px; height: 16px; flex: 0 0 16px;
+  width: 13px; height: 13px; flex: 0 0 13px;
   padding: 0; border: 1px solid #facc15; border-radius: 50%;
   color: #111827; background: #facc15;
-  font-size: 10px; font-weight: 800; line-height: 1;
+  font-size: 8px; font-weight: 800; line-height: 1;
   cursor: pointer;
 }
 .register-comment-info:focus-visible, .enterprise-register-note-info:focus-visible {

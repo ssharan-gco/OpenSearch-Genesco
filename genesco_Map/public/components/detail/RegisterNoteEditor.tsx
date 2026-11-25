@@ -1,16 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { RegisterNote } from '../../services/registerNotes';
 
 interface Props {
   registerId: string;
+  scopeLabel?: string;
   note?: RegisterNote;
   onSave: (registerId: string, incidentNumber: string, statusUpdate: string) => Promise<void>;
 }
 
 type EditorMode = 'add' | 'edit' | null;
 
-/** Mounted for Warning / Down registers only. Saved details belong to one outage episode. */
-export const RegisterNoteEditor = ({ registerId, note, onSave }: Props) => {
+/** Mounted for Warning / Down / No data registers. Saved details belong to one unresolved episode. */
+export const RegisterNoteEditor = ({ registerId, scopeLabel, note, onSave }: Props) => {
+  const targetLabel = scopeLabel || `Register ${registerId}`;
   const hasDetails = Boolean(note?.incidentNumber?.trim() || note?.comment?.trim());
   const [mode, setMode] = useState<EditorMode>(null);
   const [showDetails, setShowDetails] = useState(false);
@@ -18,6 +20,32 @@ export const RegisterNoteEditor = ({ registerId, note, onSave }: Props) => {
   const [updateDraft, setUpdateDraft] = useState(note?.comment || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const actionsRef = useRef<HTMLDivElement>(null);
+  const [popupLeft, setPopupLeft] = useState(0);
+
+  // The old right: 0 anchor pushed the 270px editor off the left edge
+  // for the first register. Clamp the popup horizontally to the viewport,
+  // whether the trigger is in the first or last register card.
+  const updatePopupPosition = useCallback(() => {
+    if (typeof window === 'undefined' || !actionsRef.current) return;
+    const anchor = actionsRef.current.getBoundingClientRect();
+    const margin = 16;
+    const popupWidth = Math.min(270, window.innerWidth - margin * 2);
+    const maxLeft = Math.max(margin, window.innerWidth - popupWidth - margin);
+    const desiredLeft = Math.min(Math.max(anchor.left, margin), maxLeft);
+    setPopupLeft(desiredLeft - anchor.left);
+  }, []);
+
+  useEffect(() => {
+    if (!mode && !showDetails) return;
+    updatePopupPosition();
+    window.addEventListener('resize', updatePopupPosition);
+    window.addEventListener('scroll', updatePopupPosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePopupPosition);
+      window.removeEventListener('scroll', updatePopupPosition, true);
+    };
+  }, [mode, showDetails, updatePopupPosition]);
 
   useEffect(() => {
     if (mode === null) {
@@ -32,6 +60,7 @@ export const RegisterNoteEditor = ({ registerId, note, onSave }: Props) => {
     setUpdateDraft(nextMode === 'edit' ? note?.comment || '' : '');
     setError('');
     setShowDetails(false);
+    updatePopupPosition();
     setMode(nextMode);
   };
 
@@ -72,14 +101,14 @@ export const RegisterNoteEditor = ({ registerId, note, onSave }: Props) => {
   };
 
   return (
-    <div className="register-comment-control">
+    <div className="register-comment-control" ref={actionsRef}>
       <div className="register-comment-actions">
         <button
           className="register-comment-add"
           type="button"
           disabled={hasDetails || saving}
           onClick={() => openEditor('add')}
-          aria-label={`Add incident details for register ${registerId}`}
+          aria-label={`Add incident details for ${targetLabel}`}
         >
           + Add
         </button>
@@ -88,25 +117,25 @@ export const RegisterNoteEditor = ({ registerId, note, onSave }: Props) => {
           type="button"
           disabled={!hasDetails || saving}
           onClick={() => openEditor('edit')}
-          aria-label={`Edit incident details for register ${registerId}`}
+          aria-label={`Edit incident details for ${targetLabel}`}
         >
           ✎ Edit
         </button>
         <button
           className="register-comment-info"
           type="button"
-          aria-label={`View incident details for register ${registerId}`}
+          aria-label={`View incident details for ${targetLabel}`}
           aria-expanded={showDetails}
-          onClick={() => { setShowDetails((visible) => !visible); setMode(null); setError(''); }}
+          onClick={() => { updatePopupPosition(); setShowDetails((visible) => !visible); setMode(null); setError(''); }}
         >
           i
         </button>
       </div>
 
       {showDetails && (
-        <div className="register-incident-details" role="dialog" aria-label={`Register ${registerId} incident details`}>
+        <div className="register-incident-details" style={{ left: popupLeft, right: 'auto', maxWidth: 'calc(100vw - 32px)' }} role="dialog" aria-label={`${targetLabel} incident details`}>
           <div className="register-incident-details-heading">
-            <strong>Register {registerId}</strong>
+            <strong>{targetLabel}</strong>
             <button type="button" onClick={() => setShowDetails(false)} aria-label="Close incident details">×</button>
           </div>
           {!hasDetails ? (
@@ -129,10 +158,11 @@ export const RegisterNoteEditor = ({ registerId, note, onSave }: Props) => {
       {mode && (
         <form
           className="register-comment-editor"
-          aria-label={`Register ${registerId} incident editor`}
+          style={{ left: popupLeft, right: 'auto', maxWidth: 'calc(100vw - 32px)' }}
+          aria-label={`${targetLabel} incident editor`}
           onSubmit={(event) => { event.preventDefault(); void save(); }}
         >
-          <strong className="register-comment-editor-title">Register {registerId}</strong>
+          <strong className="register-comment-editor-title">{targetLabel}</strong>
           <label htmlFor={`register-incident-${registerId}`}>Incident number <span aria-hidden="true">*</span></label>
           <input
             id={`register-incident-${registerId}`}
