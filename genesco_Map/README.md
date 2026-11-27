@@ -1,8 +1,8 @@
 # genesco_Map — Gensco map plugin for OpenSearch Dashboards 3.8
 
-A minimal, self-contained OSD plugin that keeps the original **genesco - IT** entry under the
-**MAP** section of the side nav, and adds **genesco -USERS** as a second entry. **genesco - IT**
-opens the original detailed map; **genesco -USERS** opens a separate enterprise
+A minimal, self-contained OSD plugin that keeps the original **Support Operations** entry under
+the **MAP** section of the side nav, and adds **Executive View** as a second entry.
+**Support Operations** opens the original detailed map; **Executive View** opens a separate enterprise
 store-health view with network KPIs, store pins, search and status/brand filters. Enterprise
 map pins use the same indexed coordinates and responsive, zoom-scaled sizing as the original
 map, including for Alaska and Hawaii. Both maps open focused on the contiguous U.S. as in the
@@ -14,9 +14,6 @@ Store locations are read from OpenSearch and current health from VictoriaMetrics
 backend is unavailable, the view identifies when sample locations or health are being shown.
 The earlier detailed Gensco component remains in the source but is not mounted by the current
 app.
-
-Side-nav visibility follows the authenticated OpenSearch roles: `Genesco_Users` sees only
-**genesco -USERS**, `Genesco_IT` sees only **genesco - IT**, and admin or other roles see both.
 
 ---
 
@@ -30,8 +27,7 @@ genesco_Map/
 ├─ server/
 │  ├─ index.ts                  config schema: sample_map.victoriaMetricsUrl
 │  ├─ plugin.ts                 reads config, registers routes
-│  ├─ routes/index.ts           GET /api/sample_map/vm/query and /query_range -> VictoriaMetrics
-│  └─ routes/userRoles.ts       current user's OpenSearch roles for map navigation
+│  └─ routes/index.ts           GET /api/sample_map/vm/query and /query_range -> VictoriaMetrics
 ├─ public/
 │  ├─ plugin.ts                 registers both map apps + nav-group links
 │  ├─ application.tsx           React 18 mount/unmount for both map apps
@@ -135,8 +131,17 @@ Up; zero, missing, or null values show red Down.
 | Attention Required | CPU / memory / disk is 80–89.99 %, or a register has a degraded resource state                        | `#e0a030`                         |
 | Store Down         | `gensco_site_up == 0`                                                                                 | `#ef4444` (2x pin + pulsing halo) |
 | Registers Down     | A process or service is down or has no response for a known register, or CPU / memory / disk is ≥90 % | `#ec4899`                         |
-| EOD / Maintenance  | sample store is marked for end-of-day or maintenance                                                  | `#a855f7`                         |
+| EOD / Maintenance  | store is outside its scheduled alert window or marked for end-of-day / maintenance                     | `#a855f7`                         |
 | No Status          | no `gensco_site_up` sample                                                                            | `#94a3b8`                         |
+
+For stores listed in the 2026 J&M and Journeys hours workbooks, the map uses a recurring
+weekly schedule in each store's inferred local time zone. The map shows **EOD / Maintenance**
+outside the alert window, which starts one hour before opening and ends 30 minutes after
+closing. The generated schedule is `public/lib/store-hours.json`; regenerate it together with
+the Alertmanager routes by running `node generate-maintenance-routes.js` from the local
+Alertmanager directory after updating the workbooks in Downloads. Airport stores remain
+unscheduled (24/7), and stores whose locations resolve to multiple time zones are left
+unscheduled rather than assigned an uncertain schedule.
 
 When a register is down—including when its process or service metrics have no response—and CPU,
 memory, or disk is also between 80% and 89.99%, the map pin remains **Registers Down**, while the
@@ -173,8 +178,8 @@ cd C:\dev\OpenSearch-Dashboards-3.8.0
 yarn start --no-base-path
 ```
 
-Open http://localhost:5601 → side nav **MAP → genesco - IT** for the original detailed map, or
-**MAP → genesco -USERS** for the enterprise view. OpenSearch requests use
+Open http://localhost:5601 → side nav **MAP → Support Operations** for the original detailed map, or
+**MAP → Executive View** for the enterprise view. OpenSearch requests use
 the configured `opensearch.hosts` value (the repository config defaults to
 `http://localhost:9200`), and VictoriaMetrics requests use the plugin's server-side proxy
 configured by `sample_map.victoriaMetricsUrl` (default `http://P01-wa-obs-01:8428`).
@@ -317,8 +322,8 @@ Assumes OSD is installed from the Windows zip distribution, e.g. in
 
    First start after an install can take a little longer.
 
-7. **Verify**: open `http://<server>:5601` → side nav **MAP → genesco - IT** or
-   **MAP → genesco -USERS**. If the browser shows an
+7. **Verify**: open `http://<server>:5601` → side nav **MAP → Support Operations** or
+   **MAP → Executive View**. If the browser shows an
    old version, do a hard reload (Ctrl+F5).
 
 8. **Seed demo data** (optional) from any machine that can reach OpenSearch / VictoriaMetrics —

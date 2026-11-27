@@ -5,7 +5,7 @@ import { fetchWeatherAlerts } from '../services/weatherAlerts';
 import { DASHBOARD_AUTO_REFRESH_MS } from '../lib/autoRefresh';
 
 /** The Go collector refreshes OpenSearch every 10 min; this just re-reads that index. */
-export const useWeatherAlerts = (search: OsSearch) => {
+export const useWeatherAlerts = (search: OsSearch, autoRefresh = true) => {
   const [alerts, setAlerts] = useState<WeatherAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +28,7 @@ export const useWeatherAlerts = (search: OsSearch) => {
     }
   }, [search]);
   useEffect(() => {
+    if (!autoRefresh) return;
     void load();
     const id = window.setInterval(() => {
       if (document.visibilityState === 'visible') void load();
@@ -40,6 +41,6 @@ export const useWeatherAlerts = (search: OsSearch) => {
       window.clearInterval(id);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [load]);
+  }, [load, autoRefresh]);
   return { alerts, loading, error, lastReadAt, refresh: load };
 };

@@ -18,6 +18,7 @@ interface UseGenscoMapArgs {
   focusedWeatherAlertId: string | null;
   weatherFocusRevision: number;
   onSelectSite: (siteId: string) => void;
+  enabled?: boolean;
 }
 
 // Pins grow as you zoom in.
@@ -76,6 +77,7 @@ export function useGenscoMap({
   focusedWeatherAlertId,
   weatherFocusRevision,
   onSelectSite,
+  enabled = true,
 }: UseGenscoMapArgs) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Maplibre | null>(null);
@@ -211,7 +213,7 @@ export function useGenscoMap({
 
   /* ── MAP INITIALIZATION ── */
   useEffect(() => {
-    if (!mapContainerRef.current) return;
+    if (!enabled || !mapContainerRef.current) return;
     const map = createPluginMap(mapContainerRef.current);
     mapRef.current = map;
     map.addControl(new NavigationControl({ showCompass: true }), 'top-left');
@@ -255,7 +257,7 @@ export function useGenscoMap({
       destroyPluginMap(map);
       mapRef.current = null;
     };
-  }, []);
+  }, [enabled]);
 
   /* ── Update pin status on polling, without resetting zoom/position ── */
   useEffect(() => {

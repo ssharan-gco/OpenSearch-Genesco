@@ -19,39 +19,44 @@ import {
 } from './siteService';
 
 describe('fetchSiteRecords', () => {
-  it('uses the same indexed site locations and shared health builder for map apps', async () => {
-    const osSearch = jest.fn().mockResolvedValue({
-      hits: {
-        hits: [
-          {
-            _source: {
-              site_id: 'store-2026',
-              name: 'Journeys Store',
-              city: 'Seattle',
-              state: 'WA',
-              lat: 47.6,
-              lon: -122.3,
-            },
-          },
-        ],
-      },
-    });
-
-    const { records, sampleSites, sampleMetrics } = await fetchSiteRecords(osSearch);
-
-    expect(osSearch).toHaveBeenCalledWith(
-      'gensco-sites',
-      expect.objectContaining({ query: { match_all: {} } })
-    );
-    expect(records.find(({ siteId }) => siteId === 'store-2026')).toMatchObject({
+  it('loads indexed location records rather than the static JSON or telemetry index', async () => {
+    const osSearch = jest.fn();
+    const indexed = {
+      recordId: 'seed-abc123',
+      siteId: '2101',
       name: 'Journeys Store',
+      address: '123 Any St',
       city: 'Seattle',
       state: 'WA',
+      zip: '98101',
       lat: 47.6,
       lon: -122.3,
-    });
-    expect(sampleSites).toBe(true);
+    };
+    const catalog = {
+      list: jest.fn().mockResolvedValue([indexed]),
+      add: jest.fn(),
+      update: jest.fn(),
+      remove: jest.fn(),
+    };
+    const { records, sampleSites, sampleMetrics } = await fetchSiteRecords(osSearch, catalog);
+    expect(catalog.list).toHaveBeenCalledTimes(1);
+    expect(osSearch).not.toHaveBeenCalled();
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject(indexed);
+    expect(sampleSites).toBe(false);
     expect(sampleMetrics).toBe(true);
+  });
+
+  it('does not resurrect deleted static records when the index returns an empty list', async () => {
+    const catalog = { list: jest.fn().mockResolvedValue([]), add: jest.fn(), update: jest.fn(), remove: jest.fn() };
+    const result = await fetchSiteRecords(jest.fn(), catalog);
+    expect(result.records).toEqual([]);
+    expect(result.sampleSites).toBe(false);
+  });
+
+  it('propagates an unavailable indexed catalog rather than falling back to JSON', async () => {
+    const catalog = { list: jest.fn().mockRejectedValue(new Error('index unavailable')), add: jest.fn(), update: jest.fn(), remove: jest.fn() };
+    await expect(fetchSiteRecords(jest.fn(), catalog)).rejects.toThrow('index unavailable');
   });
 });
 
@@ -189,6 +194,40 @@ describe('deriveStatus resource thresholds', () => {
     });
     expect(deriveEnterpriseStatus(createHealth({ up: null }))).toBe('Down');
     expect(deriveEnterpriseFilterStatuses(createHealth({ up: null }))).toEqual(['Down']);
+  });
+
+  it('shows scheduled non-business stores as EOD / Maintenance on both map views', () => {
+    const records = buildSiteRecords(
+      [
+        {
+          siteId: '0011',
+          name: 'Scheduled Store',
+          address: '',
+          city: 'Chicago',
+          state: 'IL',
+          zip: '',
+          lat: 41.88,
+          lon: -87.63,
+        },
+      ],
+      new Map([
+        [
+          '0011',
+          {
+            up: false,
+            services: {},
+            cpu: null,
+            memory: null,
+          },
+        ],
+      ]),
+      new Date('2026-11-23T01:00:00Z')
+    ).records[0];
+
+    expect(records.status).toBe('EOD / Maintenance');
+    expect(records.filterStatuses).toEqual(['EOD / Maintenance']);
+    expect(deriveEnterpriseStatus(records.health)).toBe('EOD / Maintenance');
+    expect(deriveEnterpriseFilterStatuses(records.health)).toEqual(['EOD / Maintenance']);
   });
 
   describe('Enterprise status thresholds', () => {

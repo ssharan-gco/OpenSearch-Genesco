@@ -1,9 +1,9 @@
 import { BehaviorSubject } from 'rxjs';
 import {
   AppCategory,
-  AppMountParameters,
   AppNavLinkStatus,
   AppUpdater,
+  AppMountParameters,
   CoreSetup,
   CoreStart,
   DEFAULT_NAV_GROUPS,
@@ -11,7 +11,7 @@ import {
 } from '../../../src/core/public';
 import { SampleMapPluginSetup, SampleMapPluginStart, AppPluginStartDependencies } from './types';
 import { ENTERPRISE_APP_ID, ENTERPRISE_APP_NAME, PLUGIN_ID, PLUGIN_NAME } from '../common';
-import { getVisibleMapApps } from './role_visibility';
+import { AuthInfo, hasBusinessUsersRole } from './lib/user_roles';
 
 // Side-nav "MAP" header. Reusing the same category id lets other map apps group under it.
 const MAP_CATEGORY: AppCategory = {
@@ -21,10 +21,7 @@ const MAP_CATEGORY: AppCategory = {
 };
 
 export class SampleMapPlugin implements Plugin<SampleMapPluginSetup, SampleMapPluginStart> {
-  private readonly genscoAppUpdater = new BehaviorSubject<AppUpdater>(() => ({
-    navLinkStatus: AppNavLinkStatus.hidden,
-  }));
-  private readonly enterpriseAppUpdater = new BehaviorSubject<AppUpdater>(() => ({
+  private readonly itAppUpdater$ = new BehaviorSubject<AppUpdater>(() => ({
     navLinkStatus: AppNavLinkStatus.hidden,
   }));
 
@@ -33,14 +30,15 @@ export class SampleMapPlugin implements Plugin<SampleMapPluginSetup, SampleMapPl
       id: string,
       title: string,
       render: 'renderEnterpriseApp' | 'renderGenscoMapApp',
-      order: number
+      order: number,
+      updater$?: BehaviorSubject<AppUpdater>
     ) => {
       core.application.register({
         id,
         title,
         category: MAP_CATEGORY,
         order,
-        updater$: id === PLUGIN_ID ? this.genscoAppUpdater : this.enterpriseAppUpdater,
+        updater$,
         async mount(params: AppMountParameters) {
           const application = await import('./application');
           const [coreStart, depsStart] = await core.getStartServices();
@@ -49,7 +47,7 @@ export class SampleMapPlugin implements Plugin<SampleMapPluginSetup, SampleMapPl
       });
     };
 
-    registerMapApp(PLUGIN_ID, PLUGIN_NAME, 'renderGenscoMapApp', 6100);
+    registerMapApp(PLUGIN_ID, PLUGIN_NAME, 'renderGenscoMapApp', 6100, this.itAppUpdater$);
     registerMapApp(ENTERPRISE_APP_ID, ENTERPRISE_APP_NAME, 'renderEnterpriseApp', 6101);
 
     // With nav-group navigation, apps not added to a group fall into "Custom".
@@ -65,26 +63,28 @@ export class SampleMapPlugin implements Plugin<SampleMapPluginSetup, SampleMapPl
 
   public start(core: CoreStart): SampleMapPluginStart {
     void core.http
-      .get<{ roles: string[] }>('/api/genesco_map/user_roles')
-      .then(({ roles }) => this.updateAppVisibility(roles))
-      .catch((error: Error) => {
-        core.notifications.toasts.addError(error, {
-          title: 'Unable to determine Gensco map role visibility',
-        });
-        this.updateAppVisibility([]);
+      .get<AuthInfo>('/api/v1/auth/authinfo')
+      .then((authInfo) => {
+        const isBusinessUsers = hasBusinessUsersRole(authInfo);
+        this.itAppUpdater$.next(() => ({
+          navLinkStatus: isBusinessUsers
+            ? AppNavLinkStatus.hidden
+            : AppNavLinkStatus.default,
+        }));
+
+        if (isBusinessUsers) {
+          core.chrome.navLinks.showOnly(ENTERPRISE_APP_ID);
+        }
+      })
+      .catch((error: unknown) => {
+        console.error('Unable to determine the current user roles for Genesco navigation.', error);
+        this.itAppUpdater$.next(() => ({ navLinkStatus: AppNavLinkStatus.default }));
       });
+
     return {};
   }
 
-  public stop() {}
-
-  private updateAppVisibility(roles: string[]) {
-    const { showGenscoIt, showGenscoUsers } = getVisibleMapApps(roles);
-    this.genscoAppUpdater.next(() => ({
-      navLinkStatus: showGenscoIt ? AppNavLinkStatus.visible : AppNavLinkStatus.hidden,
-    }));
-    this.enterpriseAppUpdater.next(() => ({
-      navLinkStatus: showGenscoUsers ? AppNavLinkStatus.visible : AppNavLinkStatus.hidden,
-    }));
+  public stop() {
+    this.itAppUpdater$.complete();
   }
 }

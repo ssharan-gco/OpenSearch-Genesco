@@ -40,7 +40,7 @@ const FILTERS: FilterDef[] = [
     label: 'EOD / Maintenance',
     value: 'EOD / Maintenance',
     color: '#a855f7',
-    def: 'Store is in end-of-day processing or scheduled maintenance.',
+    def: 'Store is outside its scheduled hours, in end-of-day processing, or under scheduled maintenance.',
   },
 ];
 

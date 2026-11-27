@@ -1601,3 +1601,360 @@ body.gensco-header-brand-active .logoContainer::after {
 .enterprise-register-incident-label { color: #fbbf24; font-weight: 700; font-size: 10px; margin-top: 3px; }
 .enterprise-register-incident-value { color: #f8fafc; white-space: pre-wrap; }
 .enterprise-register-incident-empty { color: #f8fafc; font-size: 11px; line-height: 1.45; }
+
+/* --- IT-only store catalog additions: modal is above MapLibre and all map controls --- */
+.genesco-custom-launch {
+  position: absolute;
+  top: 13px;
+  left: 58px;
+  z-index: 850;
+  border: 1px solid #51758b;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #152330;
+  color: #f2f8fc;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.24);
+}
+.genesco-custom-launch:hover { background: #244458; }
+.genesco-custom-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 2500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(3, 10, 19, 0.78);
+}
+.genesco-custom-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(650px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  border: 1px solid #41576c;
+  border-radius: 12px;
+  padding: 20px;
+  background: #111d2c;
+  color: #e7f1f8;
+  box-shadow: 0 18px 55px rgba(0, 0, 0, .5);
+}
+.genesco-custom-head { display: flex; justify-content: space-between; gap: 12px; }
+.genesco-custom-head h2 { margin: 0 0 5px; color: #f3f7fb; font-size: 19px; }
+.genesco-custom-head p { margin: 0 0 12px; color: #a6b7c9; font-size: 12px; line-height: 1.5; }
+.genesco-custom-close { width: 30px; height: 30px; border: 1px solid #41576c; border-radius: 6px; background: #213347; color: white; cursor: pointer; font-size: 20px; }
+.genesco-custom-tabs { display: flex; gap: 8px; border-bottom: 1px solid #2d4358; margin-bottom: 16px; padding-bottom: 10px; }
+.genesco-custom-tabs button { border: 1px solid #40556b; border-radius: 6px; color: #ccd9e4; background: #1b2a3b; padding: 7px 12px; cursor: pointer; font-size: 12px; }
+.genesco-custom-tabs button.is-active { background: #225678; border-color: #39a0d6; color: white; }
+.genesco-custom-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.genesco-custom-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.genesco-custom-field.is-wide { grid-column: 1 / -1; }
+.genesco-custom-field span { font-size: 12px; font-weight: 650; color: #c8d8e7; }
+.genesco-custom-field em { color: #f2a15b; font-style: normal; }
+.genesco-custom-field input { box-sizing: border-box; width: 100%; height: 35px; border: 1px solid #486179; border-radius: 6px; background: #1d2d41; color: #f2f6fa; padding: 7px 10px; font-size: 13px; }
+.genesco-custom-field input:focus { outline: 2px solid #1a95d0; outline-offset: 1px; }
+.genesco-custom-hint { font-size: 11px; line-height: 1.5; color: #a6b7c9; margin: 12px 0 0; }
+.genesco-custom-error { background: #432024; border: 1px solid #b34e5a; color: #ffdce2; border-radius: 6px; padding: 8px 10px; margin-bottom: 12px; font-size: 12px; }
+/* Keep management content stable while the map refreshes behind the dialog. */
+.genesco-custom-success { background: #173c32; border: 1px solid #2d8266; color: #c6f7df; border-radius: 6px; padding: 8px 10px; margin-bottom: 12px; font-size: 12px; }
+.genesco-custom-tabs { flex-wrap: wrap; }
+.genesco-custom-tabs button:disabled { cursor: wait; opacity: .5; }
+.genesco-custom-list-section { min-width: 0; }
+.genesco-custom-list-toolbar { display: flex; gap: 10px; align-items: end; margin-bottom: 12px; }
+.genesco-custom-list-search { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 0; color: #c8d8e7; font-size: 12px; }
+.genesco-custom-list-search input { box-sizing: border-box; width: 100%; min-width: 0; border: 1px solid #486179; border-radius: 6px; background: #1d2d41; color: #f2f6fa; padding: 8px 10px; font-size: 12px; }
+.genesco-custom-list-toolbar > button { border: 1px solid #526c81; border-radius: 6px; background: #23384d; color: #fff; padding: 8px 10px; cursor: pointer; font-size: 12px; }
+.genesco-custom-list-toolbar > button:disabled { opacity: .55; cursor: wait; }
+.genesco-custom-store-details { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.genesco-custom-actions { margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px; }
+.genesco-custom-actions button, .genesco-custom-delete-actions button { border: 1px solid #526c81; border-radius: 6px; background: #23384d; color: white; cursor: pointer; padding: 7px 12px; font-size: 12px; }
+.genesco-custom-actions button.is-primary { background: #16759d; border-color: #209ccf; font-weight: 700; }
+.genesco-custom-actions button:disabled, .genesco-custom-delete-actions button:disabled { cursor: wait; opacity: 0.5; }
+.genesco-custom-delete-list { min-height: 130px; max-height: 55vh; overflow: auto; }
+.genesco-custom-delete-list > p { color: #a6b7c9; font-size: 12px; }
+.genesco-custom-delete-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid #304356; padding: 9px 2px; }
+.genesco-custom-delete-row strong { font-size: 12px; display: block; color: #ecf3fa; }
+.genesco-custom-delete-row small { font-size: 11px; display: block; color: #abbccd; margin-top: 4px; }
+.genesco-custom-delete-actions { display: flex; gap: 5px; flex-shrink: 0; }
+.genesco-custom-delete-actions button.is-delete { border-color: #9b4c56; color: #ffb9c0; }
+.genesco-custom-delete-actions button.is-confirm { background: #9e2738; border-color: #ee5367; }
+@media (max-width: 560px) {
+  .genesco-custom-grid { grid-template-columns: 1fr; }
+  .genesco-custom-delete-row { align-items: flex-start; flex-direction: column; }
+  .genesco-custom-launch { top: 10px; left: 54px; }
+  .genesco-custom-modal { padding: 12px; }
+  .genesco-custom-list-toolbar { flex-direction: column; align-items: stretch; }
+}
+
+/* IT map only: stack the Manage Added Stores control above Weather Alerts.
+   A dedicated stack keeps both aligned when the alert list expands or collapses.
+   The modal itself is portalled to the map container, preserving its full-map backdrop. */
+.sample-map-container .genesco-it-bottom-left-stack {
+  position: absolute;
+  z-index: 850;
+  left: 12px;
+  bottom: 12px;
+  width: min(326px, calc(100% - 24px));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+  max-height: calc(100% - 24px);
+  pointer-events: none;
+}
+.sample-map-container .genesco-it-bottom-left-stack > * {
+  pointer-events: auto;
+}
+.sample-map-container .genesco-it-bottom-left-stack .genesco-custom-launch {
+  position: static;
+  inset: auto;
+  width: fit-content;
+  max-width: 100%;
+}
+.sample-map-container .genesco-it-bottom-left-stack .genesco-weather-widget {
+  position: static;
+  inset: auto;
+  width: 100%;
+  min-width: 0;
+}
+@media (max-width: 650px) {
+  .sample-map-container .genesco-it-bottom-left-stack {
+    left: 7px;
+    bottom: 62px;
+    width: min(285px, calc(100% - 14px));
+    max-height: calc(100% - 72px);
+  }
+}
+
+/* Unified catalog manager allows search of ~1,085+ indexed locations. */
+.genesco-custom-modal code { color: #a4d8fb; font-size: 11px; overflow-wrap: anywhere; }
+.genesco-custom-delete-list { max-height: 47vh; }
+.genesco-custom-actions > button { border: 1px solid #526c81; border-radius: 6px; background: #23384d; color: #fff; padding: 7px 12px; cursor: pointer; }
+.genesco-custom-actions > button:disabled { opacity: .55; cursor: wait; }
+
+/* IT-only dedicated store catalog page. The normal OSD header remains visible;
+   this view replaces the map instead of covering it with a modal. */
+.genesco-store-page {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  background: #0e1826;
+  color: #e9f2fa;
+  padding: clamp(12px, 2vw, 28px);
+  box-sizing: border-box;
+}
+.genesco-store-page-inner {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+}
+.genesco-store-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 0 0 18px;
+}
+.genesco-store-page-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #74b9e3;
+  margin-bottom: 7px;
+}
+.genesco-store-page-header h1 {
+  margin: 0 0 7px;
+  font-size: clamp(21px, 2.2vw, 27px);
+  font-weight: 750;
+  line-height: 1.2;
+  color: #fff;
+}
+.genesco-store-page-header p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #b7c7d8;
+}
+.genesco-store-page-header code, .genesco-store-page .genesco-custom-hint code {
+  color: #96d9fd;
+}
+.genesco-store-page-back {
+  flex-shrink: 0;
+  border: 1px solid #62889f;
+  background: #20364a;
+  color: #fff;
+  border-radius: 8px;
+  padding: 10px 15px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+.genesco-store-page-back:hover { background: #2a4a62; }
+.genesco-store-page-back:disabled { opacity: .5; cursor: wait; }
+.genesco-store-page-panel {
+  background: #142337;
+  border: 1px solid #314b60;
+  box-shadow: 0 7px 25px rgba(0, 0, 0, .2);
+  border-radius: 12px;
+  padding: clamp(12px, 1.65vw, 22px);
+  min-width: 0;
+}
+.genesco-store-page-toolbar {
+  border-bottom: 1px solid #314b60;
+  margin-bottom: 16px;
+}
+.genesco-store-page-toolbar .genesco-custom-tabs { border: 0; margin-bottom: 0; }
+.genesco-store-page-panel .genesco-custom-form {
+  max-width: 970px;
+  margin: 0 auto;
+}
+.genesco-store-page-panel .genesco-custom-form h2 {
+  font-size: 17px;
+  color: #fff;
+  font-weight: 700;
+  margin: 2px 0 18px;
+}
+.genesco-store-page-panel .genesco-custom-grid { gap: 16px 20px; }
+.genesco-store-page-panel .genesco-custom-field input { height: 40px; }
+.genesco-store-page-panel .genesco-custom-list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.genesco-store-page-panel .genesco-custom-list-search { flex: 2 1 255px; }
+.genesco-custom-list-select {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  color: #c8d8e7;
+  flex: 1 1 150px;
+  min-width: 135px;
+}
+.genesco-custom-list-select select {
+  width: 100%;
+  height: 36px;
+  border: 1px solid #486179;
+  border-radius: 6px;
+  background: #1d2d41;
+  color: #f2f6fa;
+  padding: 7px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.genesco-store-page-panel .genesco-custom-list-search input { height: 36px; }
+.genesco-custom-list-summary {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 9px;
+  color: #b8d2e5;
+  font-size: 12px;
+}
+.genesco-custom-table-scroll {
+  border: 1px solid #324c61;
+  border-radius: 7px;
+  overflow-x: auto;
+  max-width: 100%;
+  scrollbar-color: #5f8eae #17273a;
+}
+.genesco-custom-table-scroll:focus-visible { outline: 2px solid #43a9e1; }
+.genesco-custom-table {
+  width: 100%;
+  min-width: 1120px;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+  color: #e1edf5;
+}
+.genesco-custom-table th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  background: #243951;
+  color: #d7eafb;
+  padding: 12px 11px;
+  border-bottom: 1px solid #47647a;
+  white-space: nowrap;
+}
+.genesco-custom-table td {
+  padding: 11px;
+  border-bottom: 1px solid #2a4055;
+  vertical-align: top;
+  white-space: nowrap;
+}
+.genesco-custom-table tbody tr:nth-child(even) { background: #182a3f; }
+.genesco-custom-table tbody tr:hover { background: #233b52; }
+.genesco-custom-table tbody tr:last-child td { border-bottom: none; }
+.genesco-custom-table td strong { color: #fff; }
+/* Compact catalog: the row-level action is beside Store #, never off at the far right. */
+.genesco-custom-table .genesco-custom-name-cell {
+  white-space: normal;
+  min-width: 145px;
+  max-width: 210px;
+  line-height: 1.45;
+}
+.genesco-custom-table .genesco-custom-address-cell {
+  white-space: normal;
+  min-width: 150px;
+  max-width: 240px;
+  line-height: 1.45;
+}
+.genesco-custom-table .genesco-custom-record-cell {
+  font-family: monospace;
+  font-size: 11px;
+}
+.genesco-custom-table-actions {
+  white-space: nowrap;
+}
+.genesco-custom-table-actions button {
+  border: 1px solid #526c81;
+  border-radius: 6px;
+  background: #23384d;
+  color: white;
+  cursor: pointer;
+  padding: 6px 11px;
+  font-size: 12px;
+}
+.genesco-custom-table-actions button:disabled { opacity: .5; cursor: wait; }
+.genesco-custom-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  padding: 16px 0 4px;
+}
+.genesco-custom-pagination button {
+  border: 1px solid #45627a;
+  border-radius: 6px;
+  background: #1d3146;
+  color: #e6f1fa;
+  padding: 7px 11px;
+  min-width: 35px;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.genesco-custom-pagination button.is-current {
+  background: #247fae;
+  color: #fff;
+  border-color: #42a9da;
+}
+.genesco-custom-pagination button:disabled { opacity: .38; cursor: default; }
+.genesco-custom-pagination > span { margin-left: auto; font-size: 12px; color: #b4c9d9; }
+.genesco-store-page-panel .genesco-custom-actions { padding-bottom: 3px; }
+@media (max-width: 800px) {
+  .genesco-store-page-header { flex-direction: column; }
+  .genesco-store-page-panel .genesco-custom-grid { grid-template-columns: 1fr; }
+  .genesco-custom-pagination > span { width: 100%; margin-left: 0; }
+  .genesco-store-page-panel .genesco-custom-list-toolbar { align-items: stretch; }
+}

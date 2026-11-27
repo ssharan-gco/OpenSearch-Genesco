@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import moment from 'moment-timezone';
 import { CFG } from '../../lib/constants';
-import { DASHBOARD_AUTO_REFRESH_MS } from '../../lib/autoRefresh';
 import { STORE_INCIDENT_SCOPE } from '../../lib/storeIncident';
 import { OsSearch, SiteRecord, TimeWindow } from '../../lib/types';
 import {
@@ -262,14 +261,11 @@ export const DetailPanel = ({
         loadingNotes = false;
       }
     };
-    refreshNotes();
-    // Detect recoveries while this detail page remains open, without changing
-    // any existing register-health refresh or selected historical time range.
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === 'visible') void refreshNotes();
-    }, DASHBOARD_AUTO_REFRESH_MS);
-    return () => { cancelled = true; window.clearInterval(timer); };
-  }, [site.siteId, registerNotesClient]);
+    void refreshNotes();
+    // No automatic refresh on the detail page: polling could overwrite an
+    // incident editor while someone is typing. Manual Refresh rechecks recovery.
+    return () => { cancelled = true; };
+  }, [site.siteId, registerNotesClient, refreshToken]);
 
   const saveRegisterNote = async (registerId: string, incidentNumber: string, statusUpdate: string) => {
     const note = await registerNotesClient.save(site.siteId, registerId, incidentNumber, statusUpdate);
@@ -288,8 +284,8 @@ export const DetailPanel = ({
     let cancelled = false;
     setLoading(true);
     setLoadError(null);
-    // Keep the current register cards (and any open editor) mounted during
-    // each 30-second refresh. Clear them only when switching stores.
+    // Keep register cards mounted for manual refresh or range changes.
+    // Clear them only when switching stores.
     if (lastDashboardStoreRef.current !== site.siteId) {
       setDashboard(null);
       setLastRefreshedAt(null);

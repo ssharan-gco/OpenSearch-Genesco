@@ -8,6 +8,7 @@ import { normalizeUsState, UsStateName } from '../lib/us_states';
 import { getUsStateRegion, UsRegionName } from '../lib/us_regions';
 import { createOsSearch } from '../services/searchClient';
 import { createRegisterNotesClient } from '../services/registerNotes';
+import { createCustomStoreClient } from '../services/customStores';
 import { useWeatherAlerts } from '../hooks/useWeatherAlerts';
 import { DASHBOARD_AUTO_REFRESH_MS } from '../lib/autoRefresh';
 import { WeatherAlertsPanel } from './WeatherAlertsPanel';
@@ -27,6 +28,7 @@ import { RegionFilterDropdown } from './region_filter_dropdown';
 export const EnterpriseApp = ({ basename, notifications, http, navigation }: GenscoAppDeps) => {
   const osSearch = useRef(createOsSearch(http)).current;
   const registerNotesClient = useRef(createRegisterNotesClient(http)).current;
+  const customStoreClient = useRef(createCustomStoreClient(http)).current;
   const rootRef = useRef<HTMLDivElement>(null);
   const [rootHeight, setRootHeight] = useState('calc(100vh - 48px)');
   const [loading, setLoading] = useState(false);
@@ -60,7 +62,7 @@ export const EnterpriseApp = ({ basename, notifications, http, navigation }: Gen
       if (firstLoad) setLoading(true);
       try {
         const { records, sampleSites: sample, sampleMetrics: metricsAreSample } =
-          await fetchSiteRecords(osSearch);
+          await fetchSiteRecords(osSearch, customStoreClient);
         if (cancelled) return;
         setAllSites(records);
         setSampleSites(sample);
@@ -92,7 +94,7 @@ export const EnterpriseApp = ({ basename, notifications, http, navigation }: Gen
       window.clearInterval(timer);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [osSearch, notifications]);
+  }, [osSearch, notifications, customStoreClient]);
 
   useEffect(() => {
     const element = rootRef.current;

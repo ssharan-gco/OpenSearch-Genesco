@@ -5,12 +5,13 @@
 import { CFG, METRICS } from '../lib/constants';
 import { BrandCode, getBrandCode } from '../lib/brands';
 import { DASHBOARD_DEMO_SITE, sampleHealth } from '../lib/sampleData';
-import { ACTIVE_SITES } from '../lib/activeStores';
 import { normalizeUsState, UsStateName } from '../lib/us_states';
 import { getUsStateRegion, UsRegionName } from '../lib/us_regions';
+import { isOutsideStoreHours } from '../lib/storeHours';
 import { OsSearch, SiteHealth, SiteLocation, SiteRecord, SiteStatus } from '../lib/types';
 import { fetchAllStoreHealth } from './registerMetrics';
 import { instantQuery } from './victoriaMetrics';
+import { CustomStoreClient } from './customStores';
 
 export const getSiteFilterCounts = (
   sites: SiteRecord[],
@@ -45,16 +46,20 @@ export const getSiteFilterCounts = (
   return { counts, totalSites };
 };
 
-/** The Active Store Excel is authoritative for both IT and USERS map locations.
- * Locations remain available even when an OpenSearch telemetry index is empty.
- * The existing live health/metric loading and status derivation are not changed.
+/**
+ * genesco-stores is the sole authority for both IT and USERS map locations.
+ * Never fall back to static JSON: doing so would resurrect deleted records.
  */
 export const fetchSiteLocations = async (
-  _osSearch: OsSearch
-): Promise<{ sites: SiteLocation[]; sample: boolean }> => ({
-  sites: ACTIVE_SITES,
-  sample: false,
-});
+  _osSearch: OsSearch,
+  storesClient?: CustomStoreClient
+): Promise<{ sites: SiteLocation[]; sample: boolean }> => {
+  if (!storesClient) {
+    throw new Error('Indexed store catalog client is required; the static catalog is no longer a map data source');
+  }
+  const stores = await storesClient.list();
+  return { sites: stores, sample: false };
+};
 
 /**
  * Latest health for every site in 4 instant queries (one per metric).
@@ -99,11 +104,11 @@ export const fetchAllSiteHealth = async (): Promise<Map<string, SiteHealth>> => 
   return map;
 };
 
-/** Host outage takes precedence over maintenance, register outage, and resource status. */
+/** EOD takes precedence while a store is outside its scheduled alert window. */
 export const deriveStatus = (h: SiteHealth | undefined): SiteStatus => {
+  if (h?.maintenance) return 'EOD / Maintenance';
   if (!h || h.up === null) return 'Down';
   if (!h.up) return 'Down';
-  if (h.maintenance) return 'EOD / Maintenance';
   const registerStatuses = Object.values(h.registerStatuses || {});
   const allRegistersDown =
     registerStatuses.length > 0 &&
@@ -127,10 +132,8 @@ export const deriveStatus = (h: SiteHealth | undefined): SiteStatus => {
 
 export const deriveFilterStatuses = (h: SiteHealth | undefined): SiteStatus[] => {
   const status = deriveStatus(h);
+  if (h?.maintenance) return [status];
   if (!h || h.up === null) return ['Down'];
-  if (h.maintenance) {
-    return [status];
-  }
   const registerStatuses = Object.values(h.registerStatuses || {});
   const anyRegisterDown =
     Boolean(h.registersDown) ||
@@ -165,9 +168,9 @@ export const deriveFilterStatuses = (h: SiteHealth | undefined): SiteStatus[] =>
 
 /** Enterprise health ignores resource thresholds and uses operational register/service signals only. */
 export const deriveEnterpriseStatus = (h: SiteHealth | undefined): SiteStatus => {
+  if (h?.maintenance) return 'EOD / Maintenance';
   if (!h || h.up === null) return 'Down';
   if (!h.up) return 'Down';
-  if (h.maintenance) return 'EOD / Maintenance';
 
   const operationalStatuses = h.operationalRegisterStatuses
     ? Object.values(h.operationalRegisterStatuses)
@@ -194,7 +197,8 @@ export const deriveEnterpriseFilterStatuses = (h: SiteHealth | undefined): SiteS
 /** Joins locations + health. When VM returned nothing at all, sample health is used instead. */
 export const buildSiteRecords = (
   sites: SiteLocation[],
-  health: Map<string, SiteHealth>
+  health: Map<string, SiteHealth>,
+  at: Date = new Date()
 ): { records: SiteRecord[]; sampleMetrics: boolean } => {
   const sampleMetrics = health.size === 0;
   const records = sites.map((s) => {
@@ -203,11 +207,13 @@ export const buildSiteRecords = (
       sampleMetrics || (s.siteId === DASHBOARD_DEMO_SITE.siteId && !liveHealth)
         ? sampleHealth(s.siteId)
         : liveHealth || { up: null, services: {}, cpu: null, memory: null };
+    const maintenance = h.maintenance || isOutsideStoreHours(s.siteId, at);
+    const siteHealth = maintenance ? { ...h, maintenance: true } : h;
     return {
       ...s,
-      health: h,
-      status: deriveStatus(h),
-      filterStatuses: deriveFilterStatuses(h),
+      health: siteHealth,
+      status: deriveStatus(siteHealth),
+      filterStatuses: deriveFilterStatuses(siteHealth),
     };
   });
   return { records, sampleMetrics };
@@ -215,10 +221,11 @@ export const buildSiteRecords = (
 
 /** Loads the shared location and health data used by both Gensco map applications. */
 export const fetchSiteRecords = async (
-  osSearch: OsSearch
+  osSearch: OsSearch,
+  customStores?: CustomStoreClient
 ): Promise<{ records: SiteRecord[]; sampleSites: boolean; sampleMetrics: boolean }> => {
   const [{ sites, sample: sampleSites }, health] = await Promise.all([
-    fetchSiteLocations(osSearch),
+    fetchSiteLocations(osSearch, customStores),
     fetchAllSiteHealth(),
   ]);
   const { records, sampleMetrics } = buildSiteRecords(sites, health);

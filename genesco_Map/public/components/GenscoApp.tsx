@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { I18nProvider } from '@osd/i18n/react';
 import moment from 'moment-timezone';
 import tzLookup from 'tz-lookup';
-import { BrowserRouter as Router } from 'react-router-dom';
+import { BrowserRouter as Router, useHistory, useLocation } from 'react-router-dom';
 import { PLUGIN_ID } from '../../common';
 import { GenscoAppDeps, SiteRecord, StatusFilter } from '../lib/types';
 import { normalizeUsState, UsStateName } from '../lib/us_states';
@@ -12,6 +12,8 @@ import { resolveTimeWindow } from '../lib/timeRange';
 import { getStoreMapKey } from '../lib/storeMapKey';
 import { createOsSearch } from '../services/searchClient';
 import { createRegisterNotesClient } from '../services/registerNotes';
+import { createCustomStoreClient } from '../services/customStores';
+import { CustomStoreManager } from './CustomStoreManager';
 import { useWeatherAlerts } from '../hooks/useWeatherAlerts';
 import { DASHBOARD_AUTO_REFRESH_MS } from '../lib/autoRefresh';
 import { WeatherAlertsPanel } from './WeatherAlertsPanel';
@@ -31,9 +33,15 @@ const detectSystemTimeZone = () => {
 /* ================================================================
    MAIN APPLICATION
    ================================================================ */
-export const GenscoApp = ({ basename, notifications, http, navigation }: GenscoAppDeps) => {
+const GenscoAppContent = ({ notifications, http, navigation }: GenscoAppDeps) => {
+  const history = useHistory();
+  const location = useLocation();
+  // Dedicated IT management page. The map and its polling are suspended here.
+  const managingStores = location.pathname.replace(/\/$/, '') === '/stores';
   const osSearch = useRef(createOsSearch(http)).current;
   const registerNotesClient = useRef(createRegisterNotesClient(http)).current;
+  const customStoreClient = useRef(createCustomStoreClient(http)).current;
+  const [customStoreRevision, setCustomStoreRevision] = useState(0);
   const onRegisterMetricsError = useCallback(
     (error: Error) =>
       notifications.toasts.addError(error, { title: 'Failed to load live register metrics' }),
@@ -49,12 +57,14 @@ export const GenscoApp = ({ basename, notifications, http, navigation }: GenscoA
   const [stateFilter, setStateFilter] = useState<UsStateName | null>(null);
   const [regionFilter, setRegionFilter] = useState<UsRegionName | null>(null);
   const [search, setSearch] = useState('');
+  const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+  const hasLoadedMapOnceRef = useRef(false);
   const {
     alerts: weatherAlerts,
     loading: weatherLoading,
     error: weatherError,
     refresh: refreshWeather,
-  } = useWeatherAlerts(osSearch);
+  } = useWeatherAlerts(osSearch, selectedSiteId === null && !managingStores);
   const [showWeatherAlerts, setShowWeatherAlerts] = useState(false);
   const [focusedWeatherAlertId, setFocusedWeatherAlertId] = useState<string | null>(null);
   const [weatherFocusRevision, setWeatherFocusRevision] = useState(0);
@@ -123,7 +133,6 @@ export const GenscoApp = ({ basename, notifications, http, navigation }: GenscoA
     };
   }, [notifications]);
 
-  const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const selectedTimeWindow = useMemo(
     () => resolveTimeWindow(timeStart, timeEnd),
     [timeStart, timeEnd, detailRefreshTrigger]
@@ -185,10 +194,14 @@ export const GenscoApp = ({ basename, notifications, http, navigation }: GenscoA
     focusedWeatherAlertId,
     weatherFocusRevision,
     onSelectSite: setSelectedSiteId,
+    enabled: !managingStores,
   });
 
-  /* ── MAP DATA ── */
+  /* ── MAP DATA: automatic polling only while the map view is active.
+     Custom-store mutations trigger a one-off background reload without
+     re-mounting the store management dialog. */
   useEffect(() => {
+    if (selectedSiteId !== null || managingStores) return;
     let cancelled = false;
     let inFlight = false;
     let firstLoad = true;
@@ -197,9 +210,9 @@ export const GenscoApp = ({ basename, notifications, http, navigation }: GenscoA
       // Do not overlap slow VictoriaMetrics requests or reset UI during polling.
       if (cancelled || inFlight) return;
       inFlight = true;
-      if (firstLoad) setLoading(true);
+      if (firstLoad && !hasLoadedMapOnceRef.current) setLoading(true);
       try {
-        const { records, sampleSites: sample, sampleMetrics: sm } = await fetchSiteRecords(osSearch);
+        const { records, sampleSites: sample, sampleMetrics: sm } = await fetchSiteRecords(osSearch, customStoreClient);
         if (cancelled) return;
         setAllSites(records);
         setSampleSites(sample);
@@ -213,7 +226,10 @@ export const GenscoApp = ({ basename, notifications, http, navigation }: GenscoA
       } finally {
         inFlight = false;
         firstLoad = false;
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          hasLoadedMapOnceRef.current = true;
+          setLoading(false);
+        }
       }
     };
     void load();
@@ -229,26 +245,16 @@ export const GenscoApp = ({ basename, notifications, http, navigation }: GenscoA
       window.clearInterval(timer);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [osSearch, notifications]);
+  }, [osSearch, notifications, customStoreClient, customStoreRevision, selectedSiteId, managingStores]);
 
-  // The manual refresh button and this timer use the same selected-store refresh token.
-  // Re-resolving relative time windows on each tick keeps the Store Health range current.
-  useEffect(() => {
-    if (!selectedSiteId) return;
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        setDetailRefreshTrigger((current) => current + 1);
-      }
-    }, DASHBOARD_AUTO_REFRESH_MS);
-    return () => window.clearInterval(timer);
-  }, [selectedSiteId]);
+  // Store-detail metrics and incident editors refresh ONLY on the user's manual
+  // Refresh action or when the selected range changes. Do not interrupt typing.
 
   const selectedSite = allSites.find((s) => getStoreMapKey(s) === selectedSiteId) || null;
   const usingSample = sampleSites || sampleMetrics;
 
   return (
-    <Router basename={basename}>
-      <I18nProvider>
+    <I18nProvider>
         <div
           ref={rootRef}
           style={{
@@ -266,9 +272,15 @@ export const GenscoApp = ({ basename, notifications, http, navigation }: GenscoA
             useDefaultBehaviors={true}
           />
 
+          {managingStores ? (
+            <CustomStoreManager
+              client={customStoreClient}
+              onChanged={() => setCustomStoreRevision((revision) => revision + 1)}
+              onBack={() => history.push('/')}
+            />
+          ) : (
           <div className="sample-map-container dark" style={{ flex: 1, position: 'relative' }}>
             <div id="map" ref={mapContainerRef} />
-
             {usingSample && !loading && (
               <div
                 className="float"
@@ -313,18 +325,26 @@ export const GenscoApp = ({ basename, notifications, http, navigation }: GenscoA
               </div>
             </div>
 
-            <WeatherAlertsPanel
-              alerts={weatherAlerts}
-              loading={weatherLoading}
-              error={weatherError}
-              visible={showWeatherAlerts}
-              onVisibleChange={setShowWeatherAlerts}
-              onRefresh={refreshWeather}
-              onFocus={(alert) => {
-                setFocusedWeatherAlertId(alert.id);
-                setWeatherFocusRevision((current) => current + 1);
-              }}
-            />
+            {/* Store management is a dedicated IT route, not a map popup. */}
+            <div className="genesco-it-bottom-left-stack">
+              {!selectedSiteId && (
+                <button className="genesco-custom-launch" type="button" onClick={() => history.push('/stores')}>
+                  <span aria-hidden="true">＋</span> Manage Stores
+                </button>
+              )}
+              <WeatherAlertsPanel
+                alerts={weatherAlerts}
+                loading={weatherLoading}
+                error={weatherError}
+                visible={showWeatherAlerts}
+                onVisibleChange={setShowWeatherAlerts}
+                onRefresh={refreshWeather}
+                onFocus={(alert) => {
+                  setFocusedWeatherAlertId(alert.id);
+                  setWeatherFocusRevision((current) => current + 1);
+                }}
+              />
+            </div>
 
             <div className="float" id="top-right-stack">
               <BrandFilterPanel
@@ -366,8 +386,14 @@ export const GenscoApp = ({ basename, notifications, http, navigation }: GenscoA
               />
             )}
           </div>
+          )}
         </div>
       </I18nProvider>
-    </Router>
   );
 };
+
+export const GenscoApp = (props: GenscoAppDeps) => (
+  <Router basename={props.basename}>
+    <GenscoAppContent {...props} />
+  </Router>
+);

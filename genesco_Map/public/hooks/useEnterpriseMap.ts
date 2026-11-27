@@ -125,16 +125,23 @@ const buildHealthPopup = (
       `<strong class="enterprise-register-incident-heading">Store #${escapeHtml(site.siteId)}</strong>` +
       storeInfoContent + `</span></span></div>`
     : '';
+  // USERS presentation only: when the STORE pin is green, show its register
+  // labels green too. Keep the actual register telemetry untouched for IT,
+  // incident-note eligibility, filters, and any persisted data.
+  const fallbackRegisterStatus = status === 'Up'
+    ? 'Up'
+    : (!site.health.operationalRegisterStatuses && site.health.registersDown ? 'Down' : 'No data');
   const registers =
     registerStatuses.length === 0
-      ? `<div class="enterprise-health-popup__register"><span>Register status</span><strong class="unknown">${!site.health.operationalRegisterStatuses && site.health.registersDown ? 'Down' : 'No data'}</strong></div>`
+      ? `<div class="enterprise-health-popup__register"><span>Register status</span><strong class="${fallbackRegisterStatus === 'Up' ? 'up' : 'unknown'}">${fallbackRegisterStatus}</strong></div>`
       : registerStatuses
           .map(([register, registerStatus]) => {
-            const statusClass = registerStatus === 'No data' ? 'unknown' : registerStatus.toLowerCase();
+            const displayedRegisterStatus = status === 'Up' ? 'Up' : registerStatus;
+            const statusClass = displayedRegisterStatus === 'No data' ? 'unknown' : displayedRegisterStatus.toLowerCase();
             const needsAttention = registerStatus === 'Down' || registerStatus === 'Degraded' || registerStatus === 'No data';
             const note = notes[normalizeNoteRegisterId(register)];
-            // Keep the info button for every Warning/Down/No-data register, even when
-            // the store itself is green or no incident has been entered yet.
+            // USERS presentation only: when a Green store displays this register as Up,
+            // hide its incident icon as well. Keep actual notes/statuses unchanged for IT.
             const hasIncidentDetails = Boolean(note?.incidentNumber?.trim() || note?.comment?.trim());
             const detailsContent = notesState === 'loading'
               ? `<span class="enterprise-register-incident-empty">Loading incident details…</span>`
@@ -146,7 +153,7 @@ const buildHealthPopup = (
                     `<span class="enterprise-register-incident-value">${escapeHtml(note?.incidentNumber || 'Not provided')}</span>` +
                     `<span class="enterprise-register-incident-label">Status update</span>` +
                     `<span class="enterprise-register-incident-value">${escapeHtml(note?.comment || 'No status update provided.')}</span>`;
-            const info = needsAttention
+            const info = needsAttention && status !== 'Up'
               ? `<span class="enterprise-register-note-wrapper">` +
                 `<button type="button" class="enterprise-register-note-info" data-register-incident-toggle="true" aria-expanded="false" aria-label="View incident details for register ${escapeHtml(register)}">i</button>` +
                 `<span class="enterprise-register-incident-card" hidden role="group" aria-label="Register ${escapeHtml(register)} incident details">` +
@@ -154,7 +161,7 @@ const buildHealthPopup = (
                 detailsContent +
                 `</span></span>`
               : '';
-            return `<div class="enterprise-health-popup__register"><span>Register ${escapeHtml(register)}</span><span class="enterprise-register-note-status">${info}<strong class="${statusClass}">${escapeHtml(registerStatus === 'Degraded' ? 'Warning' : registerStatus)}</strong></span></div>`;
+            return `<div class="enterprise-health-popup__register"><span>Register ${escapeHtml(register)}</span><span class="enterprise-register-note-status">${info}<strong class="${statusClass}">${escapeHtml(displayedRegisterStatus === 'Degraded' ? 'Warning' : displayedRegisterStatus)}</strong></span></div>`;
           })
           .join('');
   const location = [site.city, site.state].filter(Boolean).join(', ');
@@ -274,7 +281,7 @@ export function useEnterpriseMap({
         const currentSite = allRef.current.find((record) => getStoreMapKey(record) === siteKey) || site;
         const currentStatus = getDisplayedStatus(currentSite);
         // Notes and No-data register IDs are loaded only for the clicked store.
-        // The overall pin color must never suppress an individual register's info icon.
+        // The green-store USERS display override suppresses the info icon only in this popup.
         const popup = new Popup({
           closeButton: true,
           closeOnClick: true,
